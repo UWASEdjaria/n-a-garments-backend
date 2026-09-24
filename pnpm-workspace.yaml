@@ -1,0 +1,5 @@
+allowBuilds:
+  '@scarf/scarf': false
+  esbuild: false
+  msgpackr-extract: false
+  workerd: false
