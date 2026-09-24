@@ -4,8 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "prisma skills sync || exit 0"
+    "tsoa:gen": "tsoa spec-and-routes",
+    "tsoa:watch": "nodemon --watch src/controllers --watch src/interfaces -e ts --delay 1 --exec \"pnpm tsoa:gen\"",
+    "dev": "concurrently \"pnpm tsoa:watch\" \"nodemon --watch src --ignore src/controllers --ignore src/interfaces --ignore src/generated -e ts --delay 3 --exec \\\"tsx src/server.ts\\\"\"",
+    "build": "pnpm tsoa:gen && tsc",
+    "start": "node dist/src/server.js"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +22,8 @@
   },
   "type": "module",
   "dependencies": {
-    "@prisma/client": "^7.10.0",
+    "@prisma/client": "^6.19.3",
+    "@tsoa/runtime": "7.0.0-alpha.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.3",
@@ -27,7 +31,6 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
-    "prisma": "8.0.0-rc.15",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -38,11 +41,16 @@
     "@types/morgan": "^1.9.10",
     "@types/node": "^26.6.2",
     "@types/swagger-ui-express": "^4.1.8",
+    "concurrently": "^10.0.5",
     "nodemon": "^3.1.14",
+    "prisma": "^6.19.3",
     "swagger-ui-express": "^5.0.1",
     "ts-node-dev": "^2.0.0",
     "tsoa": "7.0.0-alpha.0",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
