@@ -1,8 +1,10 @@
 import { PrismaClient, User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { generateToken, JwtPayload } from '../config/jwt';
-import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData } from '../interfaces/auth.interface';
+import crypto from 'crypto';
+import { generateToken } from '../config/jwt';
+import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, JwtPayload, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface';
 import { AppError } from '../utils/appError';
+import { sendPasswordResetEmail } from '../utils/email';
 
 const prisma = new PrismaClient();
 
@@ -70,5 +72,64 @@ export class AuthService {
     if (!user) throw new AppError('User not found.', 404);
 
     return { success: true, data: user };
+  }
+
+  async forgotPassword(body: ForgotPasswordRequest): Promise<MessageResponse> {
+    const user = await prisma.user.findUnique({ where: { email: body.email.toLowerCase().trim() } });
+
+    // Always return success to prevent email enumeration
+    if (!user) return { success: true, message: 'If this email exists, a reset link has been sent.' };
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetToken: token, resetTokenExpiry: expiry },
+    });
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+
+    try {
+      await sendPasswordResetEmail(user.email, user.name, resetUrl);
+    } catch (err) {
+      console.log('[forgotPassword] Email sending failed:', err);
+      // In development, log the reset URL to terminal so you can test without email
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`\n🔑 [DEV] Password reset URL for ${user.email}:\n${resetUrl}\n`);
+      } else {
+        throw new AppError('Failed to send reset email. Please try again.', 500);
+      }
+    }
+
+    return { success: true, message: 'If this email exists, a reset link has been sent.' };
+  }
+
+  async resetPassword(body: ResetPasswordRequest): Promise<MessageResponse> {
+    if (!body.token) throw new AppError('Reset token is required.', 400);
+
+    if (body.password !== body.confirmPassword)
+      throw new AppError('Passwords do not match.', 400);
+
+    if (body.password.length < 6)
+      throw new AppError('Password must be at least 6 characters long.', 400);
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: body.token,
+        resetTokenExpiry: { gt: new Date() }, // token not expired
+      },
+    });
+
+    if (!user) throw new AppError('Invalid or expired reset token.', 400);
+
+    const passwordHash = await bcrypt.hash(body.password, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, resetToken: null, resetTokenExpiry: null },
+    });
+
+    return { success: true, message: 'Password reset successfully. You can now log in.' };
   }
 }

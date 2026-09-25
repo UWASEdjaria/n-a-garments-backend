@@ -7,6 +7,146 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
+			"CategoryData": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"slug": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"slug",
+					"description",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CategoryListResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/CategoryData"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CategorySingleResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"$ref": "#/components/schemas/CategoryData"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StandardErrorResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean",
+						"enum": [
+							false
+						],
+						"nullable": false
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"type": "number",
+						"enum": [
+							null
+						],
+						"nullable": true
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateCategoryRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateCategoryRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UserRole": {
+				"type": "string",
+				"enum": [
+					"CUSTOMER",
+					"ADMIN"
+				]
+			},
 			"AuthUserData": {
 				"properties": {
 					"id": {
@@ -19,7 +159,7 @@
 						"type": "string"
 					},
 					"role": {
-						"type": "string"
+						"$ref": "#/components/schemas/UserRole"
 					},
 					"phone": {
 						"type": "string",
@@ -30,7 +170,24 @@
 					"id",
 					"name",
 					"email",
-					"role"
+					"role",
+					"phone"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AuthResponsePayload": {
+				"properties": {
+					"token": {
+						"type": "string"
+					},
+					"user": {
+						"$ref": "#/components/schemas/AuthUserData"
+					}
+				},
+				"required": [
+					"token",
+					"user"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -44,19 +201,7 @@
 						"type": "string"
 					},
 					"data": {
-						"properties": {
-							"user": {
-								"$ref": "#/components/schemas/AuthUserData"
-							},
-							"token": {
-								"type": "string"
-							}
-						},
-						"required": [
-							"user",
-							"token"
-						],
-						"type": "object"
+						"$ref": "#/components/schemas/AuthResponsePayload"
 					}
 				},
 				"required": [
@@ -109,6 +254,54 @@
 				],
 				"type": "object",
 				"additionalProperties": false
+			},
+			"MessageResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"success",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ForgotPasswordRequest": {
+				"properties": {
+					"email": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"email"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ResetPasswordRequest": {
+				"properties": {
+					"token": {
+						"type": "string"
+					},
+					"password": {
+						"type": "string"
+					},
+					"confirmPassword": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"token",
+					"password",
+					"confirmPassword"
+				],
+				"type": "object",
+				"additionalProperties": false
 			}
 		},
 		"securitySchemes": {
@@ -128,6 +321,271 @@
 		"contact": {}
 	},
 	"paths": {
+		"/categories": {
+			"get": {
+				"operationId": "GetAllCategories",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CategoryListResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get all categories with optional search",
+				"tags": [
+					"Categories"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "search",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateCategory",
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CategorySingleResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Conflict - Category already exists",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Create a new category — Admin only",
+				"tags": [
+					"Categories"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateCategoryRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/categories/{id}": {
+			"get": {
+				"operationId": "GetCategoryById",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CategorySingleResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Category not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get a single category by ID",
+				"tags": [
+					"Categories"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateCategory",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CategorySingleResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Category not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Conflict",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Update a category — Admin only",
+				"tags": [
+					"Categories"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateCategoryRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteCategory",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"message",
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Category not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Delete a category — Admin only",
+				"tags": [
+					"Categories"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
 		"/auth/register": {
 			"post": {
 				"operationId": "Register",
@@ -143,10 +601,24 @@
 						}
 					},
 					"400": {
-						"description": "Bad Request"
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
 					},
 					"409": {
-						"description": "Conflict - Email already exists"
+						"description": "Conflict - Email already exists",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
 					}
 				},
 				"description": "Registers a new customer",
@@ -182,13 +654,27 @@
 						}
 					},
 					"400": {
-						"description": "Bad Request"
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
 					},
 					"401": {
-						"description": "Unauthorized"
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
 					}
 				},
-				"description": "Authenticates a user (CUSTOMER or ADMIN). Role is returned in the response.",
+				"description": "Authenticates any user — role is returned in the response",
 				"tags": [
 					"Authentication"
 				],
@@ -233,7 +719,14 @@
 						}
 					},
 					"401": {
-						"description": "Unauthorized"
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
 					}
 				},
 				"description": "Returns the current authenticated user profile",
@@ -246,6 +739,92 @@
 					}
 				],
 				"parameters": []
+			}
+		},
+		"/auth/forgot-password": {
+			"post": {
+				"operationId": "ForgotPassword",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MessageResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Sends a password reset link to the user's email",
+				"tags": [
+					"Authentication"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ForgotPasswordRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/auth/reset-password": {
+			"post": {
+				"operationId": "ResetPassword",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MessageResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid or expired token",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Resets the user's password using the token from the email link",
+				"tags": [
+					"Authentication"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ResetPasswordRequest"
+							}
+						}
+					}
+				}
 			}
 		}
 	},
