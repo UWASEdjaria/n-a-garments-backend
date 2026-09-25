@@ -37,6 +37,8 @@ model User {
   phone        String?
   passwordHash String
   role         Role          @default(CUSTOMER)
+  resetToken       String?
+  resetTokenExpiry DateTime?
   orders       Order[]
   cart         Cart?
   customOrders CustomOrder[]
