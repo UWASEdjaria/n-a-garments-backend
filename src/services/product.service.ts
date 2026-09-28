@@ -1,7 +1,7 @@
-import { PrismaClient, Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage } from "@prisma/client";
-import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from "../interfaces/product.interface";
-import { AppError } from "../utils/appError";
-import { ImageService } from "./image.service";
+import { PrismaClient, Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage } from '@prisma/client';
+import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from '../interfaces/product.interface';
+import { AppError } from '../utils/appError';
+import { ImageService } from './image.service';
 
 const prisma = new PrismaClient();
 
@@ -10,28 +10,28 @@ type PrismaProductWithImages = PrismaProduct & { images: PrismaProductImage[] };
 export class ProductsServices {
   private imageService = new ImageService();
 
-  private getStockStatus(qty: number): StockStatus {
-    if (qty > 100) return "overstock";
-    if (qty < 10) return "low";
-    return "medium";
+  private getStockStatus(qty: number, minimumStockLevel: number): StockStatus {
+    if (qty > 100) return 'overstock';
+    if (qty <= minimumStockLevel) return 'low';
+    return 'medium';
   }
 
   private format(p: PrismaProductWithImages): Product {
-    return { ...p, price: Number(p.price), stockStatus: this.getStockStatus(p.stockQuantity) };
+    return { ...p, price: Number(p.price), stockStatus: this.getStockStatus(p.stockQuantity, p.minimumStockLevel) };
   }
 
   private async resolveImageUrl(image?: Express.Multer.File, imageUrl?: string): Promise<string | undefined> {
     if (image) return (await this.imageService.upload(image)).imageUrl;
-    if (imageUrl && imageUrl !== "undefined") return imageUrl;
+    if (imageUrl && imageUrl !== 'undefined') return imageUrl;
     return undefined;
   }
 
   async createProduct(image: Express.Multer.File | undefined, data: CreateProductDTO): Promise<Product> {
     const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
-    if (!category) throw new AppError("Category not found", 404);
+    if (!category) throw new AppError('Category not found', 404);
 
     const existingSlug = await prisma.product.findUnique({ where: { slug: data.slug } });
-    if (existingSlug) throw new AppError("Product slug already exists", 400);
+    if (existingSlug) throw new AppError('Product slug already exists', 400);
 
     const resolvedUrl = await this.resolveImageUrl(image, data.imageUrl);
 
@@ -62,12 +62,12 @@ export class ProductsServices {
     const skip = (page - 1) * limit;
 
     const where: Prisma.ProductWhereInput = {};
-    if (filters.name) where.name = { contains: filters.name, mode: "insensitive" };
+    if (filters.name) where.name = { contains: filters.name, mode: 'insensitive' };
     if (filters.categoryId) where.categoryId = filters.categoryId;
     if (filters.slug) where.slug = filters.slug;
 
     const [products, totalCount] = await Promise.all([
-      prisma.product.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" }, include: { images: true } }),
+      prisma.product.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' }, include: { images: true } }),
       prisma.product.count({ where }),
     ]);
 
@@ -77,32 +77,60 @@ export class ProductsServices {
     };
   }
 
-  async getProductById(id: string): Promise<Product | null> {
+  async getProductById(id: string): Promise<Product> {
     const product = await prisma.product.findUnique({ where: { id }, include: { images: true } });
-    return product ? this.format(product) : null;
+    if (!product) throw new AppError('Product not found', 404);
+    return this.format(product);
+  }
+
+  async getProductBySlug(slug: string): Promise<Product> {
+    const product = await prisma.product.findUnique({ where: { slug }, include: { images: true } });
+    if (!product) throw new AppError('Product not found', 404);
+    return this.format(product);
   }
 
   async deleteProduct(id: string): Promise<void> {
-    const product = await prisma.product.findUnique({ where: { id } });
-    if (!product) throw new AppError("Product not found", 404);
+    const product = await prisma.product.findUnique({ where: { id }, include: { images: true } });
+    if (!product) throw new AppError('Product not found', 404);
+
+    // Delete images from Cloudinary before removing DB record
+    for (const img of product.images) {
+      // Cloudinary public_id is embedded in the URL path after /upload/
+      const match = img.url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
+      if (match) {
+        await this.imageService.delete(match[1]).catch(() => null);
+      }
+    }
+
     await prisma.product.delete({ where: { id } });
   }
 
   async updateProduct(id: string, image: Express.Multer.File | undefined, data: UpdateProductDTO): Promise<Product> {
     const product = await prisma.product.findUnique({ where: { id }, include: { images: true } });
-    if (!product) throw new AppError("Product not found", 404);
+    if (!product) throw new AppError('Product not found', 404);
 
     if (data.categoryId) {
       const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
-      if (!category) throw new AppError("Category not found", 404);
+      if (!category) throw new AppError('Category not found', 404);
     }
 
     if (data.slug && data.slug !== product.slug) {
       const existing = await prisma.product.findUnique({ where: { slug: data.slug } });
-      if (existing) throw new AppError("Product slug already exists", 400);
+      if (existing) throw new AppError('Product slug already exists', 400);
     }
 
     const resolvedUrl = await this.resolveImageUrl(image, data.imageUrl);
+
+    // If a new image is provided, delete all existing images first
+    if (resolvedUrl && product.images.length > 0) {
+      for (const img of product.images) {
+        const match = img.url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
+        if (match) {
+          await this.imageService.delete(match[1]).catch(() => null);
+        }
+      }
+      await prisma.productImage.deleteMany({ where: { productId: id } });
+    }
 
     const updated = await prisma.product.update({
       where: { id },
@@ -120,6 +148,19 @@ export class ProductsServices {
           images: { create: { url: resolvedUrl, isPrimary: true } },
         }),
       },
+      include: { images: true },
+    });
+
+    return this.format(updated);
+  }
+
+  async toggleAvailability(id: string): Promise<Product> {
+    const product = await prisma.product.findUnique({ where: { id }, include: { images: true } });
+    if (!product) throw new AppError('Product not found', 404);
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data: { isAvailable: !product.isAvailable },
       include: { images: true },
     });
 

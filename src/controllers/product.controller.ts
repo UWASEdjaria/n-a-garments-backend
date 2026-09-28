@@ -1,19 +1,22 @@
-import { Controller, Delete, FormField, Get, Path, Post, Put, Query, Route, Security, Tags, UploadedFile } from "tsoa";
-import { CreateProductDTO, UpdateProductDTO, Product } from "../interfaces/product.interface";
-import { ProductsServices } from "../services/product.service";
-import { createProductSchema, ALLOWED_SIZES, ALLOWED_COLORS } from "../validators/product.validator";
+import { Controller, Delete, FormField, Get, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags, UploadedFile } from 'tsoa';
+import { CreateProductDTO, UpdateProductDTO, Product } from '../interfaces/product.interface';
+import { StandardErrorResponse } from '../interfaces/auth.interface';
+import { ProductsServices } from '../services/product.service';
+import { createProductSchema, ALLOWED_SIZES, ALLOWED_COLORS } from '../validators/product.validator';
 
 const parseArray = (value?: string): string[] => {
   if (!value) return [];
-  try { return JSON.parse(value) as string[]; } catch { return value.split(",").map((s) => s.trim()).filter(Boolean); }
+  try { return JSON.parse(value) as string[]; } catch { return value.split(',').map((s) => s.trim()).filter(Boolean); }
 };
 
-@Route("products")
-@Tags("Products")
+@Route('products')
+@Tags('Products')
 export class ProductController extends Controller {
   private productService = new ProductsServices();
 
-  @Get("/")
+  /** List all products with optional filters and pagination */
+  @Get('/')
+  @SuccessResponse('200', 'Success')
   public async listProducts(
     @Query() name?: string,
     @Query() categoryId?: string,
@@ -25,18 +28,34 @@ export class ProductController extends Controller {
   }
 
   /** Returns all valid sizes and colors for products */
-  @Get("/options")
+  @Get('/options')
+  @SuccessResponse('200', 'Success')
   public async getProductOptions(): Promise<{ sizes: string[]; colors: string[] }> {
     return { sizes: [...ALLOWED_SIZES], colors: [...ALLOWED_COLORS] };
   }
 
-  @Get("/{id}")
-  public async getProduct(@Path() id: string): Promise<Product | null> {
+  /** Get a single product by ID */
+  @Get('/{id}')
+  @SuccessResponse('200', 'Success')
+  @Response<StandardErrorResponse>(404, 'Product not found')
+  public async getProduct(@Path() id: string): Promise<Product> {
     return this.productService.getProductById(id);
   }
 
-  @Post("/")
-  @Security("jwt", ["ADMIN"])
+  /** Get a single product by slug */
+  @Get('/slug/{slug}')
+  @SuccessResponse('200', 'Success')
+  @Response<StandardErrorResponse>(404, 'Product not found')
+  public async getProductBySlug(@Path() slug: string): Promise<Product> {
+    return this.productService.getProductBySlug(slug);
+  }
+
+  /** Create a new product — Admin only */
+  @Post('/')
+  @Security('jwt', ['ADMIN'])
+  @SuccessResponse('201', 'Created')
+  @Response<StandardErrorResponse>(400, 'Bad Request')
+  @Response<StandardErrorResponse>(404, 'Category not found')
   public async createProduct(
     @FormField() name: string,
     @FormField() slug: string,
@@ -60,21 +79,19 @@ export class ProductController extends Controller {
       minimumStockLevel: minimumStockLevel ? Number(minimumStockLevel) : 5,
       sizes: parseArray(sizes),
       colors: parseArray(colors),
-      imageUrl: imageUrl === "undefined" ? undefined : imageUrl,
+      imageUrl: imageUrl === 'undefined' ? undefined : imageUrl,
     };
     createProductSchema.parse(dto);
-    return this.productService.createProduct(image, dto);
+    const result = await this.productService.createProduct(image, dto);
+    this.setStatus(201);
+    return result;
   }
 
-  @Delete("/{id}")
-  @Security("jwt", ["ADMIN"])
-  public async deleteProduct(@Path() id: string): Promise<{ success: boolean; message: string }> {
-    await this.productService.deleteProduct(id);
-    return { success: true, message: "Product deleted successfully" };
-  }
-
-  @Put("/{id}")
-  @Security("jwt", ["ADMIN"])
+  /** Update a product — Admin only */
+  @Put('/{id}')
+  @Security('jwt', ['ADMIN'])
+  @SuccessResponse('200', 'Success')
+  @Response<StandardErrorResponse>(404, 'Product not found')
   public async updateProduct(
     @Path() id: string,
     @FormField() name?: string,
@@ -99,8 +116,27 @@ export class ProductController extends Controller {
       ...(minimumStockLevel !== undefined && { minimumStockLevel: Number(minimumStockLevel) }),
       ...(sizes && { sizes: parseArray(sizes) }),
       ...(colors && { colors: parseArray(colors) }),
-      ...(imageUrl && imageUrl !== "undefined" && { imageUrl }),
+      ...(imageUrl && imageUrl !== 'undefined' && { imageUrl }),
     };
     return this.productService.updateProduct(id, image, dto);
+  }
+
+  /** Toggle product availability — Admin only */
+  @Put('/{id}/availability')
+  @Security('jwt', ['ADMIN'])
+  @SuccessResponse('200', 'Success')
+  @Response<StandardErrorResponse>(404, 'Product not found')
+  public async toggleAvailability(@Path() id: string): Promise<Product> {
+    return this.productService.toggleAvailability(id);
+  }
+
+  /** Delete a product — Admin only */
+  @Delete('/{id}')
+  @Security('jwt', ['ADMIN'])
+  @SuccessResponse('200', 'Success')
+  @Response<StandardErrorResponse>(404, 'Product not found')
+  public async deleteProduct(@Path() id: string): Promise<{ success: boolean; message: string }> {
+    await this.productService.deleteProduct(id);
+    return { success: true, message: 'Product deleted successfully' };
   }
 }
