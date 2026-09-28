@@ -421,7 +421,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
         app.get('/wishlist',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.getWishlist)),
 
@@ -453,7 +453,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 productId: {"in":"path","name":"productId","required":true,"dataType":"string"},
         };
         app.post('/wishlist/:productId',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.addItem)),
 
@@ -485,7 +485,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 productId: {"in":"path","name":"productId","required":true,"dataType":"string"},
         };
         app.delete('/wishlist/:productId',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(WishlistController)),
             ...(fetchMiddlewares<RequestHandler>(WishlistController.prototype.removeItem)),
 
@@ -664,6 +664,35 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProductController_getProductOptions: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/products/options',
+            ...(fetchMiddlewares<RequestHandler>(ProductController)),
+            ...(fetchMiddlewares<RequestHandler>(ProductController.prototype.getProductOptions)),
+
+            async function ProductController_getProductOptions(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProductController_getProductOptions, request, response });
+
+                const controller = new ProductController();
+
+              await templateService.apiHandler({
+                methodName: 'getProductOptions',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
               });
             } catch (err) {
                 return next(err);
@@ -1206,7 +1235,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
         app.get('/cart',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(CartController)),
             ...(fetchMiddlewares<RequestHandler>(CartController.prototype.getCart)),
 
@@ -1238,7 +1267,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 requestBody: {"in":"body","name":"requestBody","required":true,"ref":"AddCartItemRequest"},
         };
         app.post('/cart/items',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(CartController)),
             ...(fetchMiddlewares<RequestHandler>(CartController.prototype.addItem)),
 
@@ -1271,7 +1300,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 requestBody: {"in":"body","name":"requestBody","required":true,"ref":"UpdateCartItemRequest"},
         };
         app.put('/cart/items/:itemId',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(CartController)),
             ...(fetchMiddlewares<RequestHandler>(CartController.prototype.updateItem)),
 
@@ -1303,7 +1332,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 itemId: {"in":"path","name":"itemId","required":true,"dataType":"string"},
         };
         app.delete('/cart/items/:itemId',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(CartController)),
             ...(fetchMiddlewares<RequestHandler>(CartController.prototype.removeItem)),
 
@@ -1334,7 +1363,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
         app.delete('/cart',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(CartController)),
             ...(fetchMiddlewares<RequestHandler>(CartController.prototype.clearCart)),
 

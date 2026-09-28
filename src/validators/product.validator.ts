@@ -6,6 +6,12 @@ export const ALLOWED_COLORS = ['Black', 'White', 'Navy', 'Grey', 'Brown', 'Beige
 const sizeEnum = z.enum(ALLOWED_SIZES, { error: `Size must be one of: ${ALLOWED_SIZES.join(', ')}` });
 const colorEnum = z.enum(ALLOWED_COLORS, { error: `Color must be one of: ${ALLOWED_COLORS.join(', ')}` });
 
+export const ALLOWED_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"] as const;
+export const ALLOWED_COLORS = ["Black", "White", "Navy", "Grey", "Brown", "Beige", "Red", "Blue", "Green", "Yellow", "Pink", "Orange", "Purple"] as const;
+
+const sizeEnum = z.enum(ALLOWED_SIZES, { error: `Size must be one of: ${ALLOWED_SIZES.join(", ")}` });
+const colorEnum = z.enum(ALLOWED_COLORS, { error: `Color must be one of: ${ALLOWED_COLORS.join(", ")}` });
+
 export const createProductSchema = z.object({
   name: z.string().min(3, 'Product name must be at least 3 characters'),
   slug: z.string().min(3, 'Slug is required'),

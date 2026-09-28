@@ -894,7 +894,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": []
@@ -924,7 +926,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [
@@ -961,7 +965,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [
@@ -2146,7 +2152,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": []
@@ -2183,7 +2191,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": []
@@ -2216,7 +2226,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [],
@@ -2256,7 +2268,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [
@@ -2303,7 +2317,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [
