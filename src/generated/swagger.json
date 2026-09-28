@@ -137,6 +137,38 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"StockStatus": {
+				"type": "string",
+				"enum": [
+					"low",
+					"medium",
+					"overstock"
+				]
+			},
+			"ProductImage": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"url": {
+						"type": "string"
+					},
+					"isPrimary": {
+						"type": "boolean"
+					},
+					"productId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"url",
+					"isPrimary",
+					"productId"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"Product": {
 				"properties": {
 					"id": {
@@ -163,6 +195,12 @@
 						"type": "number",
 						"format": "double"
 					},
+					"isAvailable": {
+						"type": "boolean"
+					},
+					"stockStatus": {
+						"$ref": "#/components/schemas/StockStatus"
+					},
 					"sizes": {
 						"items": {
 							"type": "string"
@@ -175,8 +213,11 @@
 						},
 						"type": "array"
 					},
-					"imageUrl": {
-						"type": "string"
+					"images": {
+						"items": {
+							"$ref": "#/components/schemas/ProductImage"
+						},
+						"type": "array"
 					},
 					"categoryId": {
 						"type": "string"
@@ -198,8 +239,11 @@
 					"price",
 					"stockQuantity",
 					"minimumStockLevel",
+					"isAvailable",
+					"stockStatus",
 					"sizes",
 					"colors",
+					"images",
 					"categoryId",
 					"createdAt",
 					"updatedAt"
@@ -728,6 +772,117 @@
 					"email": {
 						"type": "string"
 					},
+					"quantity": {
+						"type": "number",
+						"format": "double"
+					},
+					"size": {
+						"type": "string"
+					},
+					"color": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"productId",
+					"quantity"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateCartItemRequest": {
+				"properties": {
+					"quantity": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"quantity"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UserRole": {
+				"type": "string",
+				"enum": [
+					"CUSTOMER",
+					"ADMIN"
+				]
+			},
+			"AuthUserData": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"role": {
+						"$ref": "#/components/schemas/UserRole"
+					},
+					"phone": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"email",
+					"role",
+					"phone"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AuthResponsePayload": {
+				"properties": {
+					"token": {
+						"type": "string"
+					},
+					"user": {
+						"$ref": "#/components/schemas/AuthUserData"
+					}
+				},
+				"required": [
+					"token",
+					"user"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AuthResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"$ref": "#/components/schemas/AuthResponsePayload"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"RegisterRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
 					"password": {
 						"type": "string"
 					},
@@ -850,7 +1005,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": []
@@ -880,7 +1037,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [
@@ -917,7 +1076,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [
@@ -1241,6 +1402,47 @@
 						}
 					}
 				}
+			}
+		},
+		"/products/options": {
+			"get": {
+				"operationId": "GetProductOptions",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"colors": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"sizes": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										}
+									},
+									"required": [
+										"colors",
+										"sizes"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Returns all valid sizes and colors for products",
+				"tags": [
+					"Products"
+				],
+				"security": [],
+				"parameters": []
 			}
 		},
 		"/products/{id}": {
@@ -1921,7 +2123,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": []
@@ -1958,7 +2162,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": []
@@ -1991,7 +2197,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [],
@@ -2031,7 +2239,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [
@@ -2078,7 +2288,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [

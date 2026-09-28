@@ -1,12 +1,30 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters } from "../interfaces/product.interface";
+import { PrismaClient, Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage } from "@prisma/client";
+import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from "../interfaces/product.interface";
 import { AppError } from "../utils/appError";
 import { ImageService } from "./image.service";
 
 const prisma = new PrismaClient();
 
+type PrismaProductWithImages = PrismaProduct & { images: PrismaProductImage[] };
+
 export class ProductsServices {
   private imageService = new ImageService();
+
+  private getStockStatus(qty: number): StockStatus {
+    if (qty > 100) return "overstock";
+    if (qty < 10) return "low";
+    return "medium";
+  }
+
+  private format(p: PrismaProductWithImages): Product {
+    return { ...p, price: Number(p.price), stockStatus: this.getStockStatus(p.stockQuantity) };
+  }
+
+  private async resolveImageUrl(image?: Express.Multer.File, imageUrl?: string): Promise<string | undefined> {
+    if (image) return (await this.imageService.upload(image)).imageUrl;
+    if (imageUrl && imageUrl !== "undefined") return imageUrl;
+    return undefined;
+  }
 
   async createProduct(image: Express.Multer.File | undefined, data: CreateProductDTO): Promise<Product> {
     const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
@@ -15,11 +33,7 @@ export class ProductsServices {
     const existingSlug = await prisma.product.findUnique({ where: { slug: data.slug } });
     if (existingSlug) throw new AppError("Product slug already exists", 400);
 
-    let imageUrl = data.imageUrl;
-    if (image) {
-      const upload = await this.imageService.upload(image);
-      imageUrl = upload.imageUrl;
-    }
+    const resolvedUrl = await this.resolveImageUrl(image, data.imageUrl);
 
     const product = await prisma.product.create({
       data: {
@@ -32,11 +46,14 @@ export class ProductsServices {
         sizes: data.sizes ?? [],
         colors: data.colors ?? [],
         categoryId: data.categoryId,
-        imageUrl,
+        ...(resolvedUrl && {
+          images: { create: { url: resolvedUrl, isPrimary: true } },
+        }),
       },
+      include: { images: true },
     });
 
-    return { ...product, price: Number(product.price) };
+    return this.format(product);
   }
 
   async getAllProducts(filters: ProductFilters): Promise<{ data: Product[]; totalPages: number }> {
@@ -50,19 +67,19 @@ export class ProductsServices {
     if (filters.slug) where.slug = filters.slug;
 
     const [products, totalCount] = await Promise.all([
-      prisma.product.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" } }),
+      prisma.product.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" }, include: { images: true } }),
       prisma.product.count({ where }),
     ]);
 
     return {
-      data: products.map((p) => ({ ...p, price: Number(p.price) })),
+      data: products.map((p) => this.format(p)),
       totalPages: Math.ceil(totalCount / limit),
     };
   }
 
   async getProductById(id: string): Promise<Product | null> {
-    const product = await prisma.product.findUnique({ where: { id } });
-    return product ? { ...product, price: Number(product.price) } : null;
+    const product = await prisma.product.findUnique({ where: { id }, include: { images: true } });
+    return product ? this.format(product) : null;
   }
 
   async deleteProduct(id: string): Promise<void> {
@@ -72,7 +89,7 @@ export class ProductsServices {
   }
 
   async updateProduct(id: string, image: Express.Multer.File | undefined, data: UpdateProductDTO): Promise<Product> {
-    const product = await prisma.product.findUnique({ where: { id } });
+    const product = await prisma.product.findUnique({ where: { id }, include: { images: true } });
     if (!product) throw new AppError("Product not found", 404);
 
     if (data.categoryId) {
@@ -85,11 +102,7 @@ export class ProductsServices {
       if (existing) throw new AppError("Product slug already exists", 400);
     }
 
-    let imageUrl = data.imageUrl;
-    if (image) {
-      const upload = await this.imageService.upload(image);
-      imageUrl = upload.imageUrl;
-    }
+    const resolvedUrl = await this.resolveImageUrl(image, data.imageUrl);
 
     const updated = await prisma.product.update({
       where: { id },
@@ -103,11 +116,13 @@ export class ProductsServices {
         ...(data.sizes && { sizes: data.sizes }),
         ...(data.colors && { colors: data.colors }),
         ...(data.categoryId && { categoryId: data.categoryId }),
-        ...(imageUrl !== undefined && { imageUrl }),
+        ...(resolvedUrl && {
+          images: { create: { url: resolvedUrl, isPrimary: true } },
+        }),
       },
+      include: { images: true },
     });
 
-    return { ...updated, price: Number(updated.price) };
+    return this.format(updated);
   }
-
 }
