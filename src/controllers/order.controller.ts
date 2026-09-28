@@ -2,7 +2,7 @@ import { Controller, Route, Get, Post, Patch, Body, Path, Query, Tags, Security,
 import express from 'express';
 import { OrderService } from '../services/order.service';
 import { PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface';
-import { JwtPayload } from '../config/jwt';
+import { getUser } from '../utils/getUser';
 
 const orderService = new OrderService();
 
@@ -16,13 +16,12 @@ export class OrderController extends Controller {
   @SuccessResponse('201', 'Created')
   @Response(400, 'Bad Request')
   public async placeOrder(@Request() request: express.Request, @Body() requestBody: PlaceOrderRequest): Promise<OrderResponse> {
-    const user = (request as any).user as JwtPayload;
-    const result = await orderService.placeOrder(user.userId, requestBody);
+    const result = await orderService.placeOrder(getUser(request).userId, requestBody);
     this.setStatus(201);
     return result;
   }
 
-  /** Get current user's orders — Customer */
+  /** Get current user's orders */
   @Get('my')
   @SuccessResponse('200', 'Success')
   public async getMyOrders(
@@ -30,17 +29,16 @@ export class OrderController extends Controller {
     @Query() page?: number,
     @Query() limit?: number
   ): Promise<OrderListResponse> {
-    const user = (request as any).user as JwtPayload;
-    return orderService.getMyOrders(user.userId, page, limit);
+    return orderService.getMyOrders(getUser(request).userId, page, limit);
   }
 
-  /** Get a single order by ID — Customer (own) or Admin */
+  /** Get a single order by ID — own order or Admin */
   @Get('{orderId}')
   @SuccessResponse('200', 'Success')
   @Response(403, 'Forbidden')
   @Response(404, 'Not Found')
   public async getOrderById(@Request() request: express.Request, @Path() orderId: string): Promise<OrderResponse> {
-    const user = (request as any).user as JwtPayload;
+    const user = getUser(request);
     return orderService.getOrderById(user.userId, orderId, user.role);
   }
 

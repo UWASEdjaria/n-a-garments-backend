@@ -7,6 +7,54 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
+			"WishlistItemData": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"productId": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"productId",
+					"createdAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"WishlistResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/WishlistItemData"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"StockEntry": {
 				"properties": {
 					"id": {
@@ -781,6 +829,109 @@
 		"contact": {}
 	},
 	"paths": {
+		"/wishlist": {
+			"get": {
+				"operationId": "GetWishlist",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WishlistResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get current user's wishlist",
+				"tags": [
+					"Wishlist"
+				],
+				"security": [
+					{
+						"jwt": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/wishlist/{productId}": {
+			"post": {
+				"operationId": "AddItem",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WishlistResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Product not found"
+					}
+				},
+				"description": "Add a product to wishlist",
+				"tags": [
+					"Wishlist"
+				],
+				"security": [
+					{
+						"jwt": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "productId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"delete": {
+				"operationId": "RemoveItem",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WishlistResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Item not in wishlist"
+					}
+				},
+				"description": "Remove a product from wishlist",
+				"tags": [
+					"Wishlist"
+				],
+				"security": [
+					{
+						"jwt": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "productId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
 		"/stock": {
 			"get": {
 				"operationId": "ListStockEntries",
@@ -1360,7 +1511,7 @@
 						}
 					}
 				},
-				"description": "Get current user's orders — Customer",
+				"description": "Get current user's orders",
 				"tags": [
 					"Orders"
 				],
@@ -1412,7 +1563,7 @@
 						"description": "Not Found"
 					}
 				},
-				"description": "Get a single order by ID — Customer (own) or Admin",
+				"description": "Get a single order by ID — own order or Admin",
 				"tags": [
 					"Orders"
 				],

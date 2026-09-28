@@ -2,7 +2,7 @@ import { Controller, Route, Get, Post, Put, Delete, Body, Path, Tags, Security, 
 import express from 'express';
 import { CartService } from '../services/cart.service';
 import { AddCartItemRequest, UpdateCartItemRequest, CartResponse } from '../interfaces/cart.interface';
-import { JwtPayload } from '../config/jwt';
+import { getUser } from '../utils/getUser';
 
 const cartService = new CartService();
 
@@ -15,8 +15,7 @@ export class CartController extends Controller {
   @Get()
   @SuccessResponse('200', 'Success')
   public async getCart(@Request() request: express.Request): Promise<CartResponse> {
-    const user = (request as any).user as JwtPayload;
-    return cartService.getCart(user.userId);
+    return cartService.getCart(getUser(request).userId);
   }
 
   /** Add an item to cart */
@@ -25,8 +24,7 @@ export class CartController extends Controller {
   @Response(400, 'Bad Request')
   @Response(404, 'Product not found')
   public async addItem(@Request() request: express.Request, @Body() requestBody: AddCartItemRequest): Promise<CartResponse> {
-    const user = (request as any).user as JwtPayload;
-    return cartService.addItem(user.userId, requestBody);
+    return cartService.addItem(getUser(request).userId, requestBody);
   }
 
   /** Update quantity of a cart item */
@@ -38,8 +36,7 @@ export class CartController extends Controller {
     @Path() itemId: string,
     @Body() requestBody: UpdateCartItemRequest
   ): Promise<CartResponse> {
-    const user = (request as any).user as JwtPayload;
-    return cartService.updateItem(user.userId, itemId, requestBody);
+    return cartService.updateItem(getUser(request).userId, itemId, requestBody);
   }
 
   /** Remove an item from cart */
@@ -47,15 +44,13 @@ export class CartController extends Controller {
   @SuccessResponse('200', 'Success')
   @Response(404, 'Cart item not found')
   public async removeItem(@Request() request: express.Request, @Path() itemId: string): Promise<CartResponse> {
-    const user = (request as any).user as JwtPayload;
-    return cartService.removeItem(user.userId, itemId);
+    return cartService.removeItem(getUser(request).userId, itemId);
   }
 
   /** Clear all items from cart */
   @Delete()
   @SuccessResponse('200', 'Success')
   public async clearCart(@Request() request: express.Request): Promise<{ success: boolean; message: string }> {
-    const user = (request as any).user as JwtPayload;
-    return cartService.clearCart(user.userId);
+    return cartService.clearCart(getUser(request).userId);
   }
 }

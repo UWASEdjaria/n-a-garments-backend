@@ -1,7 +1,8 @@
 import { Controller, Route, Post, Get, Body, SuccessResponse, Response, Tags, Security, Request } from 'tsoa';
 import express from 'express';
 import { AuthService } from '../services/auth.service';
-import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, JwtPayload, StandardErrorResponse, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface';
+import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, StandardErrorResponse, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface';
+import { getUser } from '../utils/getUser';
 
 const authService = new AuthService();
 
@@ -35,8 +36,7 @@ export class AuthController extends Controller {
   @SuccessResponse('200', 'Success')
   @Response<StandardErrorResponse>(401, 'Unauthorized')
   public async getMe(@Request() request: express.Request): Promise<{ success: boolean; data: AuthUserData }> {
-    const userPayload = (request as unknown as { user: JwtPayload }).user;
-    return authService.getMe(userPayload);
+    return authService.getMe(getUser(request));
   }
 
   /** Sends a password reset link to the user's email */
