@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { CreateProductDTO, Product, ProductFilters } from "../interfaces/product.interface";
+import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters } from "../interfaces/product.interface";
 import { AppError } from "../utils/appError";
 import { ImageService } from "./image.service";
 
@@ -70,4 +70,44 @@ export class ProductsServices {
     if (!product) throw new AppError("Product not found", 404);
     await prisma.product.delete({ where: { id } });
   }
+
+  async updateProduct(id: string, image: Express.Multer.File | undefined, data: UpdateProductDTO): Promise<Product> {
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) throw new AppError("Product not found", 404);
+
+    if (data.categoryId) {
+      const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
+      if (!category) throw new AppError("Category not found", 404);
+    }
+
+    if (data.slug && data.slug !== product.slug) {
+      const existing = await prisma.product.findUnique({ where: { slug: data.slug } });
+      if (existing) throw new AppError("Product slug already exists", 400);
+    }
+
+    let imageUrl = data.imageUrl;
+    if (image) {
+      const upload = await this.imageService.upload(image);
+      imageUrl = upload.imageUrl;
+    }
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data: {
+        ...(data.name && { name: data.name }),
+        ...(data.slug && { slug: data.slug }),
+        ...(data.description && { description: data.description }),
+        ...(data.price !== undefined && { price: data.price }),
+        ...(data.stockQuantity !== undefined && { stockQuantity: data.stockQuantity }),
+        ...(data.minimumStockLevel !== undefined && { minimumStockLevel: data.minimumStockLevel }),
+        ...(data.sizes && { sizes: data.sizes }),
+        ...(data.colors && { colors: data.colors }),
+        ...(data.categoryId && { categoryId: data.categoryId }),
+        ...(imageUrl !== undefined && { imageUrl }),
+      },
+    });
+
+    return { ...updated, price: Number(updated.price) };
+  }
+
 }

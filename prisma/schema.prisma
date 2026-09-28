@@ -31,19 +31,20 @@ enum PaymentStatus {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  name         String
-  email        String        @unique
-  phone        String?
-  passwordHash String
-  role         Role          @default(CUSTOMER)
+  id               String        @id @default(uuid())
+  name             String
+  email            String        @unique
+  phone            String?
+  passwordHash     String
+  role             Role          @default(CUSTOMER)
   resetToken       String?
   resetTokenExpiry DateTime?
-  orders       Order[]
-  cart         Cart?
-  customOrders CustomOrder[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  orders           Order[]
+  cart             Cart?
+  wishlistItems    WishlistItem[]
+  customOrders     CustomOrder[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }
 
 model Category {
@@ -73,6 +74,7 @@ model Product {
   colors            String[] // e.g., ["Black", "White"]
   cartItems         CartItem[]
   orderItems        OrderItem[]
+  wishlistItems     WishlistItem[]
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 }
@@ -158,6 +160,17 @@ model CustomOrder {
   adminNotes         String?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
 }
 
 model ContactMessage {

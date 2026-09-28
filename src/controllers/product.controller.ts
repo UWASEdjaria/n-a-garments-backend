@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, FormField, Get, Path, Post, Query, Route, Security, Tags, UploadedFile } from "tsoa";
-import { CreateProductDTO, Product } from "../interfaces/product.interface";
+import { Body, Controller, Delete, FormField, Get, Path, Post, Put, Query, Route, Security, Tags, UploadedFile } from "tsoa";
+import { CreateProductDTO, UpdateProductDTO, Product } from "../interfaces/product.interface";
 import { ProductsServices } from "../services/product.service";
 import { createProductSchema } from "../validators/product.validator";
 
@@ -61,5 +61,36 @@ export class ProductController extends Controller {
   public async deleteProduct(@Path() id: string): Promise<{ success: boolean; message: string }> {
     await this.productService.deleteProduct(id);
     return { success: true, message: "Product deleted successfully" };
+  }
+
+  @Put("/{id}")
+  @Security("jwt", ["ADMIN"])
+  public async updateProduct(
+    @Path() id: string,
+    @FormField() name?: string,
+    @FormField() slug?: string,
+    @FormField() description?: string,
+    @FormField() price?: number,
+    @FormField() categoryId?: string,
+    @FormField() stockQuantity?: number,
+    @FormField() minimumStockLevel?: number,
+    @FormField() sizes?: string,
+    @FormField() colors?: string,
+    @FormField() imageUrl?: string,
+    @UploadedFile() image?: Express.Multer.File
+  ): Promise<Product> {
+    const dto: UpdateProductDTO = {
+      ...(name && { name }),
+      ...(slug && { slug }),
+      ...(description && { description }),
+      ...(price !== undefined && { price: Number(price) }),
+      ...(categoryId && { categoryId }),
+      ...(stockQuantity !== undefined && { stockQuantity: Number(stockQuantity) }),
+      ...(minimumStockLevel !== undefined && { minimumStockLevel: Number(minimumStockLevel) }),
+      ...(sizes && { sizes: JSON.parse(sizes) as string[] }),
+      ...(colors && { colors: JSON.parse(colors) as string[] }),
+      ...(imageUrl && imageUrl !== "undefined" && { imageUrl }),
+    };
+    return await this.productService.updateProduct(id, image, dto);
   }
 }
