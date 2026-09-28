@@ -772,6 +772,117 @@
 					"email": {
 						"type": "string"
 					},
+					"quantity": {
+						"type": "number",
+						"format": "double"
+					},
+					"size": {
+						"type": "string"
+					},
+					"color": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"productId",
+					"quantity"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateCartItemRequest": {
+				"properties": {
+					"quantity": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"quantity"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UserRole": {
+				"type": "string",
+				"enum": [
+					"CUSTOMER",
+					"ADMIN"
+				]
+			},
+			"AuthUserData": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"role": {
+						"$ref": "#/components/schemas/UserRole"
+					},
+					"phone": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"email",
+					"role",
+					"phone"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AuthResponsePayload": {
+				"properties": {
+					"token": {
+						"type": "string"
+					},
+					"user": {
+						"$ref": "#/components/schemas/AuthUserData"
+					}
+				},
+				"required": [
+					"token",
+					"user"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AuthResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"$ref": "#/components/schemas/AuthResponsePayload"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"RegisterRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
 					"password": {
 						"type": "string"
 					},
