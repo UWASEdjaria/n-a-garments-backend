@@ -8,7 +8,7 @@ const cartService = new CartService();
 
 @Route('cart')
 @Tags('Cart')
-@Security('jwt')
+@Security('jwt', ['CUSTOMER'])
 export class CartController extends Controller {
 
   /** Get current user's cart */
