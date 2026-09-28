@@ -137,6 +137,38 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"StockStatus": {
+				"type": "string",
+				"enum": [
+					"low",
+					"medium",
+					"overstock"
+				]
+			},
+			"ProductImage": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"url": {
+						"type": "string"
+					},
+					"isPrimary": {
+						"type": "boolean"
+					},
+					"productId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"url",
+					"isPrimary",
+					"productId"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"Product": {
 				"properties": {
 					"id": {
@@ -163,6 +195,12 @@
 						"type": "number",
 						"format": "double"
 					},
+					"isAvailable": {
+						"type": "boolean"
+					},
+					"stockStatus": {
+						"$ref": "#/components/schemas/StockStatus"
+					},
 					"sizes": {
 						"items": {
 							"type": "string"
@@ -175,8 +213,11 @@
 						},
 						"type": "array"
 					},
-					"imageUrl": {
-						"type": "string"
+					"images": {
+						"items": {
+							"$ref": "#/components/schemas/ProductImage"
+						},
+						"type": "array"
 					},
 					"categoryId": {
 						"type": "string"
@@ -198,11 +239,42 @@
 					"price",
 					"stockQuantity",
 					"minimumStockLevel",
+					"isAvailable",
+					"stockStatus",
 					"sizes",
 					"colors",
+					"images",
 					"categoryId",
 					"createdAt",
 					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StandardErrorResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean",
+						"enum": [
+							false
+						],
+						"nullable": false
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"type": "number",
+						"enum": [
+							null
+						],
+						"nullable": true
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -459,34 +531,6 @@
 					},
 					"data": {
 						"$ref": "#/components/schemas/CategoryData"
-					}
-				},
-				"required": [
-					"success",
-					"message",
-					"data"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"StandardErrorResponse": {
-				"properties": {
-					"success": {
-						"type": "boolean",
-						"enum": [
-							false
-						],
-						"nullable": false
-					},
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"type": "number",
-						"enum": [
-							null
-						],
-						"nullable": true
 					}
 				},
 				"required": [
@@ -1085,7 +1129,7 @@
 				"operationId": "ListProducts",
 				"responses": {
 					"200": {
-						"description": "Ok",
+						"description": "Success",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1111,6 +1155,7 @@
 						}
 					}
 				},
+				"description": "List all products with optional filters and pagination",
 				"tags": [
 					"Products"
 				],
@@ -1163,8 +1208,8 @@
 			"post": {
 				"operationId": "CreateProduct",
 				"responses": {
-					"200": {
-						"description": "Ok",
+					"201": {
+						"description": "Created",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1172,8 +1217,29 @@
 								}
 							}
 						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Category not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
 					}
 				},
+				"description": "Create a new product — Admin only",
 				"tags": [
 					"Products"
 				],
@@ -1243,26 +1309,73 @@
 				}
 			}
 		},
-		"/products/{id}": {
+		"/products/options": {
 			"get": {
-				"operationId": "GetProduct",
+				"operationId": "GetProductOptions",
 				"responses": {
 					"200": {
-						"description": "Ok",
+						"description": "Success",
 						"content": {
 							"application/json": {
 								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/Product"
+									"properties": {
+										"colors": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
+										"sizes": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
 										}
+									},
+									"required": [
+										"colors",
+										"sizes"
 									],
-									"nullable": true
+									"type": "object"
 								}
 							}
 						}
 					}
 				},
+				"description": "Returns all valid sizes and colors for products",
+				"tags": [
+					"Products"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/products/{id}": {
+			"get": {
+				"operationId": "GetProduct",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Product"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Product not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get a single product by ID",
 				"tags": [
 					"Products"
 				],
@@ -1278,58 +1391,11 @@
 					}
 				]
 			},
-			"delete": {
-				"operationId": "DeleteProduct",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"properties": {
-										"message": {
-											"type": "string"
-										},
-										"success": {
-											"type": "boolean"
-										}
-									},
-									"required": [
-										"message",
-										"success"
-									],
-									"type": "object"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Products"
-				],
-				"security": [
-					{
-						"jwt": [
-							"ADMIN"
-						]
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			},
 			"put": {
 				"operationId": "UpdateProduct",
 				"responses": {
 					"200": {
-						"description": "Ok",
+						"description": "Success",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1337,8 +1403,19 @@
 								}
 							}
 						}
+					},
+					"404": {
+						"description": "Product not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
 					}
 				},
+				"description": "Update a product — Admin only",
 				"tags": [
 					"Products"
 				],
@@ -1408,6 +1485,154 @@
 						}
 					}
 				}
+			},
+			"delete": {
+				"operationId": "DeleteProduct",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"message",
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Product not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Delete a product — Admin only",
+				"tags": [
+					"Products"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/products/slug/{slug}": {
+			"get": {
+				"operationId": "GetProductBySlug",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Product"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Product not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get a single product by slug",
+				"tags": [
+					"Products"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "slug",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/products/{id}/availability": {
+			"put": {
+				"operationId": "ToggleAvailability",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Product"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Product not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Toggle product availability — Admin only",
+				"tags": [
+					"Products"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/orders": {
