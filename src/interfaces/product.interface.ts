@@ -1,3 +1,12 @@
+export type StockStatus = 'low' | 'medium' | 'overstock';
+
+export interface ProductImage {
+  id: string;
+  url: string;
+  isPrimary: boolean;
+  productId: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -6,9 +15,11 @@ export interface Product {
   price: number;
   stockQuantity: number;
   minimumStockLevel: number;
+  isAvailable: boolean;
+  stockStatus: StockStatus;
   sizes: string[];
   colors: string[];
-  imageUrl?: string;
+  images: ProductImage[];
   categoryId: string;
   createdAt: Date;
   updatedAt: Date;
