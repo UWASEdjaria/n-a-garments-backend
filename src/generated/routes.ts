@@ -4,12 +4,18 @@
 import type { TsoaRoute } from '@tsoa/runtime';
 import {  fetchMiddlewares, ExpressTemplateService } from '@tsoa/runtime';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-import { CategoryController } from './../controllers/category.controller';
+import { StockController } from './../controllers/stock.controller.js';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-import { AuthController } from './../controllers/auth.controller';
-import { expressAuthentication } from './../config/authentication';
+import { ProductController } from './../controllers/product.controller.js';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { CategoryController } from './../controllers/category.controller.js';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { AuthController } from './../controllers/auth.controller.js';
+import { expressAuthentication } from './../config/authentication.js';
 // @ts-ignore - no great way to install types from subpackage
 import type { Request as ExRequest, Response as ExResponse, RequestHandler, Router } from 'express';
+import multer from 'multer';
+
 
 const expressAuthenticationRecasted = expressAuthentication as (req: ExRequest, securityName: string, scopes?: string[], res?: ExResponse) => Promise<any>;
 
@@ -17,6 +23,61 @@ const expressAuthenticationRecasted = expressAuthentication as (req: ExRequest, 
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
 const models: TsoaRoute.Models = {
+    "StockEntry": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "productId": {"dataType":"string","required":true},
+            "quantity": {"dataType":"double","required":true},
+            "unitCost": {"dataType":"double","required":true},
+            "supplierNote": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
+            "createdAt": {"dataType":"datetime","required":true},
+            "updatedAt": {"dataType":"datetime","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AddStockDTO": {
+        "dataType": "refObject",
+        "properties": {
+            "productId": {"dataType":"string","required":true},
+            "quantity": {"dataType":"double","required":true},
+            "unitCost": {"dataType":"double","required":true},
+            "supplierNote": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "EditStockDTO": {
+        "dataType": "refObject",
+        "properties": {
+            "quantity": {"dataType":"double"},
+            "unitCost": {"dataType":"double"},
+            "supplierNote": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "Product": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "slug": {"dataType":"string","required":true},
+            "description": {"dataType":"string","required":true},
+            "price": {"dataType":"double","required":true},
+            "stockQuantity": {"dataType":"double","required":true},
+            "minimumStockLevel": {"dataType":"double","required":true},
+            "sizes": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "colors": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "imageUrl": {"dataType":"string"},
+            "categoryId": {"dataType":"string","required":true},
+            "createdAt": {"dataType":"datetime","required":true},
+            "updatedAt": {"dataType":"datetime","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CategoryData": {
         "dataType": "refObject",
         "properties": {
@@ -170,15 +231,253 @@ const templateService = new ExpressTemplateService(models, {"noImplicitAdditiona
 
 
 
-export function RegisterRoutes(app: Router) {
+export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof multer>}) {
 
     // ###########################################################################################################
     //  NOTE: If you do not see routes for all of your controllers in this file, then you might not have informed tsoa of where to look
     //      Please look into the "controllerPathGlobs" config option described in the readme: https://github.com/lukeautry/tsoa
     // ###########################################################################################################
 
+    const upload = opts?.multer ||  multer({"limits":{"fileSize":8388608}});
 
     
+        const argsStockController_listStockEntries: Record<string, TsoaRoute.ParameterSchema> = {
+                page: {"default":1,"in":"query","name":"page","dataType":"double"},
+                limit: {"default":10,"in":"query","name":"limit","dataType":"double"},
+        };
+        app.get('/stock',
+            authenticateMiddleware([{"jwt":["ADMIN"]}]),
+            ...(fetchMiddlewares<RequestHandler>(StockController)),
+            ...(fetchMiddlewares<RequestHandler>(StockController.prototype.listStockEntries)),
+
+            async function StockController_listStockEntries(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsStockController_listStockEntries, request, response });
+
+                const controller = new StockController();
+
+              await templateService.apiHandler({
+                methodName: 'listStockEntries',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsStockController_addStockEntry: Record<string, TsoaRoute.ParameterSchema> = {
+                requestBody: {"in":"body","name":"requestBody","required":true,"ref":"AddStockDTO"},
+        };
+        app.post('/stock',
+            authenticateMiddleware([{"jwt":["ADMIN"]}]),
+            ...(fetchMiddlewares<RequestHandler>(StockController)),
+            ...(fetchMiddlewares<RequestHandler>(StockController.prototype.addStockEntry)),
+
+            async function StockController_addStockEntry(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsStockController_addStockEntry, request, response });
+
+                const controller = new StockController();
+
+              await templateService.apiHandler({
+                methodName: 'addStockEntry',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 201,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsStockController_updateStockEntry: Record<string, TsoaRoute.ParameterSchema> = {
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+                requestBody: {"in":"body","name":"requestBody","required":true,"ref":"EditStockDTO"},
+        };
+        app.put('/stock/:id',
+            authenticateMiddleware([{"jwt":["ADMIN"]}]),
+            ...(fetchMiddlewares<RequestHandler>(StockController)),
+            ...(fetchMiddlewares<RequestHandler>(StockController.prototype.updateStockEntry)),
+
+            async function StockController_updateStockEntry(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsStockController_updateStockEntry, request, response });
+
+                const controller = new StockController();
+
+              await templateService.apiHandler({
+                methodName: 'updateStockEntry',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProductController_listProducts: Record<string, TsoaRoute.ParameterSchema> = {
+                name: {"in":"query","name":"name","dataType":"string"},
+                categoryId: {"in":"query","name":"categoryId","dataType":"string"},
+                slug: {"in":"query","name":"slug","dataType":"string"},
+                page: {"in":"query","name":"page","dataType":"double"},
+                limit: {"in":"query","name":"limit","dataType":"double"},
+        };
+        app.get('/products',
+            ...(fetchMiddlewares<RequestHandler>(ProductController)),
+            ...(fetchMiddlewares<RequestHandler>(ProductController.prototype.listProducts)),
+
+            async function ProductController_listProducts(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProductController_listProducts, request, response });
+
+                const controller = new ProductController();
+
+              await templateService.apiHandler({
+                methodName: 'listProducts',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProductController_getProduct: Record<string, TsoaRoute.ParameterSchema> = {
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+        };
+        app.get('/products/:id',
+            ...(fetchMiddlewares<RequestHandler>(ProductController)),
+            ...(fetchMiddlewares<RequestHandler>(ProductController.prototype.getProduct)),
+
+            async function ProductController_getProduct(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProductController_getProduct, request, response });
+
+                const controller = new ProductController();
+
+              await templateService.apiHandler({
+                methodName: 'getProduct',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProductController_createProduct: Record<string, TsoaRoute.ParameterSchema> = {
+                name: {"in":"formData","name":"name","required":true,"dataType":"string"},
+                slug: {"in":"formData","name":"slug","required":true,"dataType":"string"},
+                description: {"in":"formData","name":"description","required":true,"dataType":"string"},
+                price: {"in":"formData","name":"price","required":true,"dataType":"double"},
+                categoryId: {"in":"formData","name":"categoryId","required":true,"dataType":"string"},
+                stockQuantity: {"in":"formData","name":"stockQuantity","dataType":"double"},
+                minimumStockLevel: {"in":"formData","name":"minimumStockLevel","dataType":"double"},
+                sizes: {"in":"formData","name":"sizes","dataType":"string"},
+                colors: {"in":"formData","name":"colors","dataType":"string"},
+                imageUrl: {"in":"formData","name":"imageUrl","dataType":"string"},
+                image: {"in":"formData","name":"image","dataType":"file"},
+        };
+        app.post('/products',
+            authenticateMiddleware([{"jwt":["ADMIN"]}]),
+            upload.fields([
+                {
+                    name: "image",
+                    maxCount: 1
+                }
+            ]),
+            ...(fetchMiddlewares<RequestHandler>(ProductController)),
+            ...(fetchMiddlewares<RequestHandler>(ProductController.prototype.createProduct)),
+
+            async function ProductController_createProduct(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProductController_createProduct, request, response });
+
+                const controller = new ProductController();
+
+              await templateService.apiHandler({
+                methodName: 'createProduct',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProductController_deleteProduct: Record<string, TsoaRoute.ParameterSchema> = {
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+        };
+        app.delete('/products/:id',
+            authenticateMiddleware([{"jwt":["ADMIN"]}]),
+            ...(fetchMiddlewares<RequestHandler>(ProductController)),
+            ...(fetchMiddlewares<RequestHandler>(ProductController.prototype.deleteProduct)),
+
+            async function ProductController_deleteProduct(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProductController_deleteProduct, request, response });
+
+                const controller = new ProductController();
+
+              await templateService.apiHandler({
+                methodName: 'deleteProduct',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsCategoryController_getAllCategories: Record<string, TsoaRoute.ParameterSchema> = {
                 search: {"in":"query","name":"search","dataType":"string"},
         };

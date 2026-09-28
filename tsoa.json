@@ -7,6 +7,7 @@
   ],
   "routes": {
     "routesDir": "src/generated",
+    "esm": true,
     "authenticationModule": "src/config/authentication.ts",
     "middleware": "express"
   },
@@ -20,9 +21,9 @@
     },
     "securityDefinitions": {
       "jwt": {
-        "type": "apiKey",
-        "name": "Authorization",
-        "in": "header"
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }
