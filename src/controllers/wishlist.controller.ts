@@ -8,7 +8,7 @@ const wishlistService = new WishlistService();
 
 @Route('wishlist')
 @Tags('Wishlist')
-@Security('jwt')
+@Security('jwt', ['CUSTOMER'])
 export class WishlistController extends Controller {
 
   /** Get current user's wishlist */

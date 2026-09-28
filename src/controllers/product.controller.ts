@@ -1,7 +1,12 @@
-import { Body, Controller, Delete, FormField, Get, Path, Post, Put, Query, Route, Security, Tags, UploadedFile } from "tsoa";
+import { Controller, Delete, FormField, Get, Path, Post, Put, Query, Route, Security, Tags, UploadedFile } from "tsoa";
 import { CreateProductDTO, UpdateProductDTO, Product } from "../interfaces/product.interface";
 import { ProductsServices } from "../services/product.service";
-import { createProductSchema } from "../validators/product.validator";
+import { createProductSchema, ALLOWED_SIZES, ALLOWED_COLORS } from "../validators/product.validator";
+
+const parseArray = (value?: string): string[] => {
+  if (!value) return [];
+  try { return JSON.parse(value) as string[]; } catch { return value.split(",").map((s) => s.trim()).filter(Boolean); }
+};
 
 @Route("products")
 @Tags("Products")
@@ -16,12 +21,18 @@ export class ProductController extends Controller {
     @Query() page?: number,
     @Query() limit?: number
   ): Promise<{ data: Product[]; totalPages: number }> {
-    return await this.productService.getAllProducts({ name, categoryId, slug, page, limit });
+    return this.productService.getAllProducts({ name, categoryId, slug, page, limit });
+  }
+
+  /** Returns all valid sizes and colors for products */
+  @Get("/options")
+  public async getProductOptions(): Promise<{ sizes: string[]; colors: string[] }> {
+    return { sizes: [...ALLOWED_SIZES], colors: [...ALLOWED_COLORS] };
   }
 
   @Get("/{id}")
   public async getProduct(@Path() id: string): Promise<Product | null> {
-    return await this.productService.getProductById(id);
+    return this.productService.getProductById(id);
   }
 
   @Post("/")
@@ -47,13 +58,12 @@ export class ProductController extends Controller {
       categoryId,
       stockQuantity: stockQuantity ? Number(stockQuantity) : 0,
       minimumStockLevel: minimumStockLevel ? Number(minimumStockLevel) : 5,
-      sizes: sizes ? (JSON.parse(sizes) as string[]) : [],
-      colors: colors ? (JSON.parse(colors) as string[]) : [],
+      sizes: parseArray(sizes),
+      colors: parseArray(colors),
       imageUrl: imageUrl === "undefined" ? undefined : imageUrl,
     };
     createProductSchema.parse(dto);
-
-    return await this.productService.createProduct(image, dto);
+    return this.productService.createProduct(image, dto);
   }
 
   @Delete("/{id}")
@@ -87,10 +97,10 @@ export class ProductController extends Controller {
       ...(categoryId && { categoryId }),
       ...(stockQuantity !== undefined && { stockQuantity: Number(stockQuantity) }),
       ...(minimumStockLevel !== undefined && { minimumStockLevel: Number(minimumStockLevel) }),
-      ...(sizes && { sizes: JSON.parse(sizes) as string[] }),
-      ...(colors && { colors: JSON.parse(colors) as string[] }),
+      ...(sizes && { sizes: parseArray(sizes) }),
+      ...(colors && { colors: parseArray(colors) }),
       ...(imageUrl && imageUrl !== "undefined" && { imageUrl }),
     };
-    return await this.productService.updateProduct(id, image, dto);
+    return this.productService.updateProduct(id, image, dto);
   }
 }
