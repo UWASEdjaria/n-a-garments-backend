@@ -30,6 +30,20 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum PaymentMethod {
+  MOMO
+  CARD
+  CASH_ON_DELIVERY
+}
+
+enum PaymentRecordStatus {
+  PENDING
+  PAID
+  SUCCESSFUL
+  FAILED
+  CANCELLED
+}
+
 model User {
   id               String        @id @default(uuid())
   name             String
@@ -125,6 +139,7 @@ model Order {
   status        OrderStatus   @default(PENDING)
   paymentStatus PaymentStatus @default(PENDING)
   items         OrderItem[]
+  payment       Payment?
   shippingAddr  String
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -182,4 +197,17 @@ model ContactMessage {
   message   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model Payment {
+  id            String              @id @default(uuid())
+  orderId       String              @unique
+  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount        Decimal             @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  status        PaymentRecordStatus @default(PENDING)
+  ref           String              @unique
+  phoneNumber   String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }

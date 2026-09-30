@@ -279,6 +279,109 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"PaymentMethodType": {
+				"type": "string",
+				"enum": [
+					"MOMO",
+					"CARD",
+					"CASH_ON_DELIVERY"
+				]
+			},
+			"PaymentStatusType": {
+				"type": "string",
+				"enum": [
+					"PENDING",
+					"PAID",
+					"SUCCESSFUL",
+					"FAILED",
+					"CANCELLED"
+				]
+			},
+			"PaymentResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"ref": {
+								"type": "string",
+								"nullable": true
+							},
+							"status": {
+								"$ref": "#/components/schemas/PaymentStatusType"
+							},
+							"paymentMethod": {
+								"$ref": "#/components/schemas/PaymentMethodType"
+							},
+							"amount": {
+								"type": "number",
+								"format": "double"
+							},
+							"orderId": {
+								"type": "string"
+							},
+							"paymentId": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"status",
+							"paymentMethod",
+							"amount",
+							"orderId",
+							"paymentId"
+						],
+						"type": "object"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"InitiatePaymentDTO": {
+				"properties": {
+					"orderId": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"paymentMethod": {
+						"$ref": "#/components/schemas/PaymentMethodType"
+					},
+					"phoneNumber": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"orderId",
+					"amount",
+					"paymentMethod"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdatePaymentStatusDTO": {
+				"properties": {
+					"status": {
+						"$ref": "#/components/schemas/PaymentStatusType"
+					}
+				},
+				"required": [
+					"status"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"OrderStatus": {
 				"type": "string",
 				"enum": [
@@ -865,8 +968,9 @@
 		}
 	},
 	"info": {
-		"title": "n-a-tailors-backend",
+		"title": "na-garments REST API",
 		"version": "1.0.0",
+		"description": "Backend API documentation for na-garments tailoring, e-commerce, and custom order platform.",
 		"license": {
 			"name": "ISC"
 		},
@@ -1639,6 +1743,187 @@
 						}
 					}
 				]
+			}
+		},
+		"/payments/initiate": {
+			"post": {
+				"operationId": "InitiatePayment",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PaymentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [
+					{
+						"jwt": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/InitiatePaymentDTO"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/payments/webhook/paypack": {
+			"post": {
+				"operationId": "HandlePaypackWebhook",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"status": {
+										"type": "string"
+									},
+									"ref": {
+										"type": "string"
+									},
+									"data": {
+										"properties": {
+											"status": {
+												"type": "string"
+											},
+											"ref": {
+												"type": "string"
+											}
+										},
+										"required": [
+											"status",
+											"ref"
+										],
+										"type": "object"
+									}
+								},
+								"type": "object"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/payments/order/{orderId}": {
+			"get": {
+				"operationId": "GetPaymentByOrderId",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PaymentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [
+					{
+						"jwt": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "orderId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/payments/{id}/status": {
+			"put": {
+				"operationId": "UpdateStatus",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PaymentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdatePaymentStatusDTO"
+							}
+						}
+					}
+				}
 			}
 		},
 		"/orders": {
