@@ -10,6 +10,8 @@ import { StockController } from './../controllers/stock.controller.js';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { ProductController } from './../controllers/product.controller.js';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { PaymentController } from './../controllers/payment.controller.js';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { OrderController } from './../controllers/order.controller.js';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { CategoryController } from './../controllers/category.controller.js';
@@ -129,6 +131,45 @@ const models: TsoaRoute.Models = {
             "success": {"dataType":"enum","enums":[false],"required":true},
             "message": {"dataType":"string","required":true},
             "data": {"dataType":"enum","enums":[null],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PaymentMethodType": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["MOMO"]},{"dataType":"enum","enums":["CARD"]},{"dataType":"enum","enums":["CASH_ON_DELIVERY"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PaymentStatusType": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["PENDING"]},{"dataType":"enum","enums":["PAID"]},{"dataType":"enum","enums":["SUCCESSFUL"]},{"dataType":"enum","enums":["FAILED"]},{"dataType":"enum","enums":["CANCELLED"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PaymentResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "success": {"dataType":"boolean","required":true},
+            "message": {"dataType":"string","required":true},
+            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"ref":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},"status":{"ref":"PaymentStatusType","required":true},"paymentMethod":{"ref":"PaymentMethodType","required":true},"amount":{"dataType":"double","required":true},"orderId":{"dataType":"string","required":true},"paymentId":{"dataType":"string","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "InitiatePaymentDTO": {
+        "dataType": "refObject",
+        "properties": {
+            "orderId": {"dataType":"string","required":true},
+            "amount": {"dataType":"double","required":true},
+            "paymentMethod": {"ref":"PaymentMethodType","required":true},
+            "phoneNumber": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "UpdatePaymentStatusDTO": {
+        "dataType": "refObject",
+        "properties": {
+            "status": {"ref":"PaymentStatusType","required":true},
         },
         "additionalProperties": false,
     },
@@ -670,35 +711,6 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsProductController_getProductOptions: Record<string, TsoaRoute.ParameterSchema> = {
-        };
-        app.get('/products/options',
-            ...(fetchMiddlewares<RequestHandler>(ProductController)),
-            ...(fetchMiddlewares<RequestHandler>(ProductController.prototype.getProductOptions)),
-
-            async function ProductController_getProductOptions(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsProductController_getProductOptions, request, response });
-
-                const controller = new ProductController();
-
-              await templateService.apiHandler({
-                methodName: 'getProductOptions',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: undefined,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsProductController_getProduct: Record<string, TsoaRoute.ParameterSchema> = {
                 id: {"in":"path","name":"id","required":true,"dataType":"string"},
         };
@@ -910,6 +922,130 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPaymentController_initiatePayment: Record<string, TsoaRoute.ParameterSchema> = {
+                body: {"in":"body","name":"body","required":true,"ref":"InitiatePaymentDTO"},
+        };
+        app.post('/payments/initiate',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController)),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.initiatePayment)),
+
+            async function PaymentController_initiatePayment(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPaymentController_initiatePayment, request, response });
+
+                const controller = new PaymentController();
+
+              await templateService.apiHandler({
+                methodName: 'initiatePayment',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPaymentController_handlePaypackWebhook: Record<string, TsoaRoute.ParameterSchema> = {
+                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"status":{"dataType":"string"},"ref":{"dataType":"string"},"data":{"dataType":"nestedObjectLiteral","nestedProperties":{"status":{"dataType":"string","required":true},"ref":{"dataType":"string","required":true}}}}},
+        };
+        app.post('/payments/webhook/paypack',
+            ...(fetchMiddlewares<RequestHandler>(PaymentController)),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.handlePaypackWebhook)),
+
+            async function PaymentController_handlePaypackWebhook(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPaymentController_handlePaypackWebhook, request, response });
+
+                const controller = new PaymentController();
+
+              await templateService.apiHandler({
+                methodName: 'handlePaypackWebhook',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPaymentController_getPaymentByOrderId: Record<string, TsoaRoute.ParameterSchema> = {
+                orderId: {"in":"path","name":"orderId","required":true,"dataType":"string"},
+        };
+        app.get('/payments/order/:orderId',
+            authenticateMiddleware([{"jwt":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController)),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.getPaymentByOrderId)),
+
+            async function PaymentController_getPaymentByOrderId(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPaymentController_getPaymentByOrderId, request, response });
+
+                const controller = new PaymentController();
+
+              await templateService.apiHandler({
+                methodName: 'getPaymentByOrderId',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPaymentController_updateStatus: Record<string, TsoaRoute.ParameterSchema> = {
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"ref":"UpdatePaymentStatusDTO"},
+        };
+        app.put('/payments/:id/status',
+            authenticateMiddleware([{"jwt":["ADMIN"]}]),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController)),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.updateStatus)),
+
+            async function PaymentController_updateStatus(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPaymentController_updateStatus, request, response });
+
+                const controller = new PaymentController();
+
+              await templateService.apiHandler({
+                methodName: 'updateStatus',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
               });
             } catch (err) {
                 return next(err);

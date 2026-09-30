@@ -8,3 +8,12 @@ export interface ErrorResponseBody {
   message: string;
   data: ErrorDetail[] | null;
 }
+
+export interface MiddlewareError extends Error {
+  code?: string;
+  errors?: object[];
+  fields?: Record<string, object>;
+  issues?: object[];
+  status?: number;
+  statusCode?: number;
+}

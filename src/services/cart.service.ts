@@ -51,8 +51,14 @@ export class CartService {
   }
 
   async updateItem(userId: string, itemId: string, body: UpdateCartItemRequest): Promise<CartResponse> {
-    const cart = await this.getOrCreateCart(userId);
-    const item = cart.items.find((i) => i.id === itemId);
+    const item = await prisma.cartItem.findFirst({
+      where: {
+        id: itemId,
+        cart: { userId },
+      },
+      include: { cart: true },
+    });
+
     if (!item) throw new AppError('Cart item not found', 404);
 
     await prisma.cartItem.update({ where: { id: itemId }, data: { quantity: body.quantity } });
@@ -62,8 +68,14 @@ export class CartService {
   }
 
   async removeItem(userId: string, itemId: string): Promise<CartResponse> {
-    const cart = await this.getOrCreateCart(userId);
-    const item = cart.items.find((i) => i.id === itemId);
+    const item = await prisma.cartItem.findFirst({
+      where: {
+        id: itemId,
+        cart: { userId },
+      },
+      include: { cart: true },
+    });
+
     if (!item) throw new AppError('Cart item not found', 404);
 
     await prisma.cartItem.delete({ where: { id: itemId } });
