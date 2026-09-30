@@ -1,16 +1,16 @@
-import { PrismaClient } from '@prisma/client';
-import { PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { OrderData, PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface';
 import { AppError } from '../utils/appError';
 
 const prisma = new PrismaClient();
 
 export class OrderService {
 
-  private formatOrder(order: any) {
+  private formatOrder(order: Prisma.OrderGetPayload<{ include: { items: true } }>): OrderData {
     return {
       ...order,
       totalAmount: Number(order.totalAmount),
-      items: order.items.map((i: any) => ({ ...i, purchasePrice: Number(i.purchasePrice) })),
+      items: order.items.map((item) => ({ ...item, purchasePrice: Number(item.purchasePrice) })),
     };
   }
 
@@ -71,7 +71,20 @@ export class OrderService {
   }
 
   async getOrderById(userId: string, orderId: string, role: string): Promise<OrderResponse> {
-    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
+    let order;
+
+    if (role === 'ADMIN') {
+      order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
+    } else {
+      order = await prisma.order.findFirst({
+        where: {
+          id: orderId,
+          userId,
+        },
+        include: { items: true },
+      });
+    }
+
     if (!order) throw new AppError('Order not found', 404);
     if (role !== 'ADMIN' && order.userId !== userId) throw new AppError('Access denied', 403);
     return { success: true, message: 'Order retrieved successfully', data: this.formatOrder(order) };

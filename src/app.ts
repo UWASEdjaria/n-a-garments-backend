@@ -19,7 +19,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerJson));
 
 // Health Check
 app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({ success: true, message: 'N&A Tailors API is running' });
+  res.status(200).json({ success: true, message: 'na-garments API is running' });
 });
 
 RegisterRoutes(app);
