@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
+ "scripts": {
     "tsoa:gen": "tsoa spec-and-routes",
-    "tsoa:watch": "nodemon --watch src/controllers --watch src/interfaces -e ts --delay 1 --exec \"pnpm tsoa:gen\"",
-    "dev": "concurrently \"pnpm tsoa:watch\" \"nodemon --watch src --ignore src/controllers --ignore src/interfaces -e ts --delay 3 --exec \\\"tsx src/server.ts\\\"\"",
+    "dev": "nodemon --watch src -e ts --exec \"pnpm tsoa:gen && tsx src/server.ts\"",
     "build": "pnpm tsoa:gen && tsc",
     "start": "node dist/src/server.js"
   },

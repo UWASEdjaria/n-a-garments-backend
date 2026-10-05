@@ -31,14 +31,20 @@ interface PaypackSDKConstructor {
 interface PaypackErrorLike {
   message?: string;
   response?: {
+    status?: number;
     data?: {
       message?: string;
     };
   };
 }
 
-const require = createRequire(process.cwd() + '/package.json');
-const PaypackModule = require('paypack-js') as {
+export class PaypackRequestError extends AppError {
+  constructor(message: string, public readonly definitivelyRejected: boolean) {
+    super(message, 400);
+  }
+}
+const nodeRequire = createRequire(process.cwd() + '/package.json');
+const PaypackModule = nodeRequire('paypack-js') as {
   default?: PaypackSDKConstructor;
   config?: PaypackSDKConstructor['config'];
 };
@@ -110,9 +116,10 @@ export class PaypackService {
 
       console.error('Paypack Cash-In Error:', paypackError?.response?.data || paypackError?.message);
 
-      throw new AppError(
+      const status = paypackError?.response?.status;
+      throw new PaypackRequestError(
         paypackError?.response?.data?.message || paypackError?.message || 'Failed to initiate Mobile Money payment prompt via Paypack.',
-        400
+        typeof status === 'number' && status >= 400 && status < 500
       );
     }
   }

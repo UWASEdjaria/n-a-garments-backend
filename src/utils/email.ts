@@ -1,7 +1,9 @@
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: Number(process.env.EMAIL_PORT) || 465,
+  secure: process.env.EMAIL_SECURE === 'true',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -9,11 +11,12 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendPasswordResetEmail = async (to: string, name: string, resetUrl: string): Promise<void> => {
-  await transporter.sendMail({
-    from: `"na-garments" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: 'Reset Your Password — na-garments',
-    html: `
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || `"na-garments" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: 'Reset Your Password — na-garments',
+      html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Hello, ${name}</h2>
         <p>You requested a password reset for your na-garments account.</p>
@@ -26,4 +29,8 @@ export const sendPasswordResetEmail = async (to: string, name: string, resetUrl:
       </div>
     `,
   });
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    throw new Error('Could not send password reset email.');
+  }
 };

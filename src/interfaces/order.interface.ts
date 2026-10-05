@@ -13,7 +13,10 @@ export interface OrderItemData {
 
 export interface OrderData {
   id: string;
-  userId: string;
+  userId: string | null;
+  guestName: string | null;
+  guestEmail: string | null;
+  guestPhone: string | null;
   totalAmount: number;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
@@ -25,6 +28,19 @@ export interface OrderData {
 
 export interface PlaceOrderRequest {
   shippingAddr: string;
+}
+
+export interface GuestPlaceOrderRequest {
+  name: string;
+  email: string;
+  phone?: string;
+  shippingAddr: string;
+  items: {
+    productId: string;
+    quantity: number;
+    size?: string;
+    color?: string;
+  }[];
 }
 
 export interface UpdateOrderStatusRequest {
