@@ -1,5 +1,4 @@
-import app from './app';
-
+import app from './app.js';
 const PORT: number = parseInt(process.env.PORT || '5000', 10);
 
 app.listen(PORT, () => {
