@@ -14,6 +14,10 @@ export interface InitiatePaymentDTO {
   phoneNumber?: string;
 }
 
+export interface InitiateGuestPaymentDTO extends InitiatePaymentDTO {
+  email: string;
+}
+
 export interface UpdatePaymentStatusDTO {
   status: PaymentStatusType;
 }
@@ -28,7 +32,18 @@ export interface PaymentResponse {
     paymentMethod: PaymentMethodType;
     status: PaymentStatusType;
     ref?: string | null;
+    retryAvailable?: boolean;
+    attempts?: PaymentAttemptSummary[];
   };
+}
+
+export interface PaymentAttemptSummary {
+  paymentId: string;
+  amount: number;
+  paymentMethod: PaymentMethodType;
+  status: PaymentStatusType;
+  ref: string;
+  createdAt: string;
 }
 
 export interface PaypackError {

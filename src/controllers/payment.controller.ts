@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Path, Post, Put, Route, Security, Tags } from 'tsoa';
+import { Body, Controller, Get, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
 import { PaymentService } from '../services/payment.service';
-import { initiatePaymentSchema, updatePaymentStatusSchema } from '../validators/payment.validator';
-import { InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse } from '../interfaces/payment.interface';
+import { initiateGuestPaymentSchema, initiatePaymentSchema, updatePaymentStatusSchema } from '../validators/payment.validator';
+import { InitiateGuestPaymentDTO, InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse } from '../interfaces/payment.interface';
 
 @Route('payments')
 @Tags('Payments')
@@ -11,8 +11,22 @@ export class PaymentController extends Controller {
   @Post('/initiate')
   @Security('jwt')
   public async initiatePayment(@Body() body: InitiatePaymentDTO): Promise<PaymentResponse> {
-    const validatedData = initiatePaymentSchema.parse(body);
-    return this.paymentService.initiatePayment(validatedData);
+    try {
+      const validatedData = initiatePaymentSchema.parse(body);
+      return await this.paymentService.initiatePayment(validatedData);
+    } catch (error) {
+      console.error('[Payment] Initiation failed:', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
+  }
+
+  @Post('/guest/initiate')
+  @SuccessResponse('200', 'Success')
+  @Response(400, 'Bad Request')
+  @Response(404, 'Order not found')
+  public async initiateGuestPayment(@Body() body: InitiateGuestPaymentDTO): Promise<PaymentResponse> {
+    const validatedData = initiateGuestPaymentSchema.parse(body);
+    return this.paymentService.initiateGuestPayment(validatedData);
   }
 
   @Post('/webhook/paypack')
@@ -31,6 +45,15 @@ export class PaymentController extends Controller {
   @Security('jwt')
   public async getPaymentByOrderId(@Path() orderId: string): Promise<PaymentResponse> {
     return this.paymentService.getPaymentByOrderId(orderId);
+  }
+
+  @Get('/guest/order/{orderId}')
+  @Response(404, 'Payment not found for this order')
+  public async getGuestPaymentByOrderId(
+    @Path() orderId: string,
+    @Query() email: string,
+  ): Promise<PaymentResponse> {
+    return this.paymentService.getGuestPaymentByOrderId(orderId, email);
   }
 
   @Put('/{id}/status')

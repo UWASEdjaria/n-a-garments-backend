@@ -219,6 +219,9 @@
 						},
 						"type": "array"
 					},
+					"imageUrl": {
+						"type": "string"
+					},
 					"categoryId": {
 						"type": "string"
 					},
@@ -297,6 +300,39 @@
 					"CANCELLED"
 				]
 			},
+			"PaymentAttemptSummary": {
+				"properties": {
+					"paymentId": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"paymentMethod": {
+						"$ref": "#/components/schemas/PaymentMethodType"
+					},
+					"status": {
+						"$ref": "#/components/schemas/PaymentStatusType"
+					},
+					"ref": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"paymentId",
+					"amount",
+					"paymentMethod",
+					"status",
+					"ref",
+					"createdAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"PaymentResponse": {
 				"properties": {
 					"success": {
@@ -307,6 +343,15 @@
 					},
 					"data": {
 						"properties": {
+							"attempts": {
+								"items": {
+									"$ref": "#/components/schemas/PaymentAttemptSummary"
+								},
+								"type": "array"
+							},
+							"retryAvailable": {
+								"type": "boolean"
+							},
 							"ref": {
 								"type": "string",
 								"nullable": true
@@ -366,6 +411,34 @@
 					"orderId",
 					"amount",
 					"paymentMethod"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"InitiateGuestPaymentDTO": {
+				"properties": {
+					"orderId": {
+						"type": "string"
+					},
+					"amount": {
+						"type": "number",
+						"format": "double"
+					},
+					"paymentMethod": {
+						"$ref": "#/components/schemas/PaymentMethodType"
+					},
+					"phoneNumber": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"orderId",
+					"amount",
+					"paymentMethod",
+					"email"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -450,7 +523,20 @@
 						"type": "string"
 					},
 					"userId": {
-						"type": "string"
+						"type": "string",
+						"nullable": true
+					},
+					"guestName": {
+						"type": "string",
+						"nullable": true
+					},
+					"guestEmail": {
+						"type": "string",
+						"nullable": true
+					},
+					"guestPhone": {
+						"type": "string",
+						"nullable": true
 					},
 					"totalAmount": {
 						"type": "number",
@@ -483,6 +569,9 @@
 				"required": [
 					"id",
 					"userId",
+					"guestName",
+					"guestEmail",
+					"guestPhone",
 					"totalAmount",
 					"status",
 					"paymentStatus",
@@ -566,6 +655,195 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"GuestPlaceOrderRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string"
+					},
+					"shippingAddr": {
+						"type": "string"
+					},
+					"items": {
+						"items": {
+							"properties": {
+								"color": {
+									"type": "string"
+								},
+								"size": {
+									"type": "string"
+								},
+								"quantity": {
+									"type": "number",
+									"format": "double"
+								},
+								"productId": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"quantity",
+								"productId"
+							],
+							"type": "object"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"name",
+					"email",
+					"shippingAddr",
+					"items"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ContactMessageData": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"names": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string",
+						"nullable": true
+					},
+					"subject": {
+						"type": "string",
+						"nullable": true
+					},
+					"message": {
+						"type": "string"
+					},
+					"isRead": {
+						"type": "boolean"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"names",
+					"email",
+					"phone",
+					"subject",
+					"message",
+					"isRead",
+					"createdAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ContactMessageSingleResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"$ref": "#/components/schemas/ContactMessageData"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateContactMessageRequest": {
+				"properties": {
+					"names": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string"
+					},
+					"subject": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"names",
+					"email",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ContactMessageListResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/ContactMessageData"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateContactMessageReadRequest": {
+				"properties": {
+					"isRead": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"isRead"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ContactMessageDeleteResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"success",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"CategoryData": {
 				"properties": {
 					"id": {
@@ -578,6 +856,10 @@
 						"type": "string"
 					},
 					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"imageUrl": {
 						"type": "string",
 						"nullable": true
 					},
@@ -651,6 +933,9 @@
 					},
 					"description": {
 						"type": "string"
+					},
+					"imageUrl": {
+						"type": "string"
 					}
 				},
 				"required": [
@@ -665,6 +950,9 @@
 						"type": "string"
 					},
 					"description": {
+						"type": "string"
+					},
+					"imageUrl": {
 						"type": "string"
 					}
 				},
@@ -1273,7 +1561,7 @@
 				"parameters": [
 					{
 						"in": "query",
-						"name": "name",
+						"name": "search",
 						"required": false,
 						"schema": {
 							"type": "string"
@@ -1563,19 +1851,16 @@
 										"type": "string"
 									},
 									"price": {
-										"type": "number",
-										"format": "double"
+										"type": "string"
 									},
 									"categoryId": {
 										"type": "string"
 									},
 									"stockQuantity": {
-										"type": "number",
-										"format": "double"
+										"type": "string"
 									},
 									"minimumStockLevel": {
-										"type": "number",
-										"format": "double"
+										"type": "string"
 									},
 									"sizes": {
 										"type": "string"
@@ -1781,6 +2066,44 @@
 				}
 			}
 		},
+		"/payments/guest/initiate": {
+			"post": {
+				"operationId": "InitiateGuestPayment",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PaymentResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request"
+					},
+					"404": {
+						"description": "Order not found"
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/InitiateGuestPaymentDTO"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/payments/webhook/paypack": {
 			"post": {
 				"operationId": "HandlePaypackWebhook",
@@ -1871,6 +2194,48 @@
 					{
 						"in": "path",
 						"name": "orderId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/payments/guest/order/{orderId}": {
+			"get": {
+				"operationId": "GetGuestPaymentByOrderId",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PaymentResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Payment not found for this order"
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "orderId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "email",
 						"required": true,
 						"schema": {
 							"type": "string"
@@ -2145,6 +2510,271 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/UpdateOrderStatusRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/orders/guest": {
+			"post": {
+				"operationId": "PlaceGuestOrder",
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/OrderResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request"
+					},
+					"404": {
+						"description": "Product not found"
+					}
+				},
+				"tags": [
+					"Orders"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/GuestPlaceOrderRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/contact": {
+			"post": {
+				"operationId": "CreateMessage",
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ContactMessageSingleResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Validation Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Contact"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateContactMessageRequest"
+							}
+						}
+					}
+				}
+			},
+			"get": {
+				"operationId": "GetAllMessages",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ContactMessageListResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Contact"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/contact/{id}": {
+			"get": {
+				"operationId": "GetMessageById",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ContactMessageSingleResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Contact message not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Contact"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"delete": {
+				"operationId": "DeleteMessage",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ContactMessageDeleteResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Contact message not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Contact"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/contact/{id}/read": {
+			"patch": {
+				"operationId": "UpdateMessageReadStatus",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ContactMessageSingleResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Validation Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Contact message not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Contact"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateContactMessageReadRequest"
 							}
 						}
 					}
