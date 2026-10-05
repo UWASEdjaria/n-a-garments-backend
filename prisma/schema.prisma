@@ -66,6 +66,7 @@ model Category {
   name        String    @unique
   slug        String    @unique
   description String?
+  imageUrl    String?
   products    Product[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -133,13 +134,16 @@ model CartItem {
 
 model Order {
   id            String        @id @default(uuid())
-  userId        String
-  user          User          @relation(fields: [userId], references: [id])
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  guestName     String?
+  guestEmail    String?
+  guestPhone    String?
   totalAmount   Decimal       @db.Decimal(10, 2)
   status        OrderStatus   @default(PENDING)
   paymentStatus PaymentStatus @default(PENDING)
   items         OrderItem[]
-  payment       Payment?
+  payments      Payment[]
   shippingAddr  String
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -201,7 +205,7 @@ model ContactMessage {
 
 model Payment {
   id            String              @id @default(uuid())
-  orderId       String              @unique
+  orderId       String
   order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   amount        Decimal             @db.Decimal(10, 2)
   paymentMethod PaymentMethod

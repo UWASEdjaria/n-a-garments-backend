@@ -3,10 +3,25 @@ import { CreateProductDTO, UpdateProductDTO, Product } from '../interfaces/produ
 import { StandardErrorResponse } from '../interfaces/auth.interface';
 import { ProductsServices } from '../services/product.service';
 import { createProductSchema, ALLOWED_SIZES, ALLOWED_COLORS } from '../validators/product.validator';
+import { AppError } from '../utils/appError';
 
 const parseArray = (value?: string): string[] => {
   if (!value) return [];
   try { return JSON.parse(value) as string[]; } catch { return value.split(',').map((s) => s.trim()).filter(Boolean); }
+};
+const cleanOptionalString = (value?: string): string | undefined => {
+  if (!value || value === 'string' || value === 'undefined') {
+    return undefined;
+  }
+
+  return value;
+};
+const parseOptionalNumber = (value?: string): number | undefined => {
+  if (value === undefined || value.trim() === '') return undefined;
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) throw new AppError('Numeric fields must be valid numbers', 400);
+  return parsed;
 };
 
 @Route('products')
@@ -18,13 +33,13 @@ export class ProductController extends Controller {
   @Get('/')
   @SuccessResponse('200', 'Success')
   public async listProducts(
-    @Query() name?: string,
+    @Query() search?: string,
     @Query() categoryId?: string,
     @Query() slug?: string,
     @Query() page?: number,
     @Query() limit?: number
   ): Promise<{ data: Product[]; totalPages: number }> {
-    return this.productService.getAllProducts({ name, categoryId, slug, page, limit });
+    return this.productService.getAllProducts({ search, categoryId, slug, page, limit });
   }
 
   /** Returns all valid sizes and colors for products */
@@ -97,26 +112,33 @@ export class ProductController extends Controller {
     @FormField() name?: string,
     @FormField() slug?: string,
     @FormField() description?: string,
-    @FormField() price?: number,
+    @FormField() price?: string,
     @FormField() categoryId?: string,
-    @FormField() stockQuantity?: number,
-    @FormField() minimumStockLevel?: number,
+    @FormField() stockQuantity?: string,
+    @FormField() minimumStockLevel?: string,
     @FormField() sizes?: string,
     @FormField() colors?: string,
     @FormField() imageUrl?: string,
     @UploadedFile() image?: Express.Multer.File
   ): Promise<Product> {
+    const parsedPrice = parseOptionalNumber(price);
+    const parsedStockQuantity = parseOptionalNumber(stockQuantity);
+    const parsedMinimumStockLevel = parseOptionalNumber(minimumStockLevel);
     const dto: UpdateProductDTO = {
       ...(name && { name }),
       ...(slug && { slug }),
       ...(description && { description }),
-      ...(price !== undefined && { price: Number(price) }),
-      ...(categoryId && { categoryId }),
-      ...(stockQuantity !== undefined && { stockQuantity: Number(stockQuantity) }),
-      ...(minimumStockLevel !== undefined && { minimumStockLevel: Number(minimumStockLevel) }),
+      ...(parsedPrice !== undefined && parsedPrice > 0 && { price: parsedPrice }),
+      ...(cleanOptionalString(categoryId) && {
+         categoryId: cleanOptionalString(categoryId),
+      }),
+      ...(parsedStockQuantity !== undefined && parsedStockQuantity >= 0 && { stockQuantity: parsedStockQuantity }),
+      ...(parsedMinimumStockLevel !== undefined && parsedMinimumStockLevel >= 0 && { minimumStockLevel: parsedMinimumStockLevel }),
       ...(sizes && { sizes: parseArray(sizes) }),
       ...(colors && { colors: parseArray(colors) }),
-      ...(imageUrl && imageUrl !== 'undefined' && { imageUrl }),
+      ...(cleanOptionalString(imageUrl) && {
+         imageUrl: cleanOptionalString(imageUrl),
+      }),
     };
     return this.productService.updateProduct(id, image, dto);
   }

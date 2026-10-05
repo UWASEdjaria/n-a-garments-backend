@@ -4,6 +4,7 @@ import { AppError } from '../utils/appError';
 
 const prisma = new PrismaClient();
 
+
 export class WishlistService {
 
   async getWishlist(userId: string): Promise<WishlistResponse> {

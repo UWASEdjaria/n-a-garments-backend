@@ -1,11 +1,13 @@
 export interface CreateCategoryRequest {
   name: string;
   description?: string;
+  imageUrl?: string;
 }
 
 export interface UpdateCategoryRequest {
   name?: string;
   description?: string;
+  imageUrl?: string;
 }
 
 export interface CategoryData {
@@ -13,6 +15,7 @@ export interface CategoryData {
   name: string;
   slug: string;
   description: string | null;
+  imageUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

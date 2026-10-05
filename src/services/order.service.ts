@@ -1,5 +1,5 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { OrderData, PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface';
+import { OrderData, GuestPlaceOrderRequest, PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface';
 import { AppError } from '../utils/appError';
 
 const prisma = new PrismaClient();
@@ -59,6 +59,74 @@ export class OrderService {
     });
 
     return { success: true, message: 'Order placed successfully', data: this.formatOrder(order) };
+  }
+
+  async placeGuestOrder(body: GuestPlaceOrderRequest): Promise<OrderResponse> {
+    const productIds = [...new Set(body.items.map((item) => item.productId))];
+    const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
+    const productById = new Map(products.map((product) => [product.id, product]));
+
+    if (productById.size !== productIds.length) {
+      throw new AppError('One or more products were not found', 404);
+    }
+
+    const quantitiesByProduct = new Map<string, number>();
+    for (const item of body.items) {
+      quantitiesByProduct.set(
+        item.productId,
+        (quantitiesByProduct.get(item.productId) ?? 0) + item.quantity,
+      );
+    }
+
+    for (const [productId, quantity] of quantitiesByProduct) {
+      const product = productById.get(productId);
+      if (!product) throw new AppError('One or more products were not found', 404);
+      if (!product.isAvailable) throw new AppError(`Product "${product.name}" is no longer available`, 400);
+      if (product.stockQuantity < quantity) throw new AppError(`Insufficient stock for "${product.name}"`, 400);
+    }
+
+    const orderItems = body.items.map((item) => {
+      const product = productById.get(item.productId);
+      if (!product) throw new AppError('One or more products were not found', 404);
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        purchasePrice: product.price,
+        size: item.size ?? null,
+        color: item.color ?? null,
+      };
+    });
+    const totalAmount = orderItems.reduce((sum, item) => {
+      const product = productById.get(item.productId);
+      if (!product) throw new AppError('One or more products were not found', 404);
+      return sum + Number(product.price) * item.quantity;
+    }, 0);
+
+    const order = await prisma.$transaction(async (tx) => {
+      const newOrder = await tx.order.create({
+        data: {
+          userId: null,
+          guestName: body.name.trim(),
+          guestEmail: body.email.trim().toLowerCase(),
+          guestPhone: body.phone?.trim() ?? null,
+          totalAmount,
+          shippingAddr: body.shippingAddr.trim(),
+          items: { create: orderItems },
+        },
+        include: { items: true },
+      });
+
+      for (const [productId, quantity] of quantitiesByProduct) {
+        await tx.product.update({
+          where: { id: productId },
+          data: { stockQuantity: { decrement: quantity } },
+        });
+      }
+
+      return newOrder;
+    });
+
+    return { success: true, message: 'Guest order placed successfully', data: this.formatOrder(order) };
   }
 
   async getMyOrders(userId: string, page = 1, limit = 10): Promise<OrderListResponse> {

@@ -20,6 +20,7 @@ export interface Product {
   sizes: string[];
   colors: string[];
   images: ProductImage[];
+  imageUrl?: string;
   categoryId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -52,7 +53,7 @@ export interface UpdateProductDTO {
 }
 
 export interface ProductFilters {
-  name?: string;
+  search?: string;
   categoryId?: string;
   slug?: string;
   page?: number;
