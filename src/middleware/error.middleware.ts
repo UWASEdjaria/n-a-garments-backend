@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
+import { MiddlewareError } from '../interfaces/error.interface';
 
 export const errorHandler = (
-  err: any,
+  err: MiddlewareError,
   _req: Request,
   res: Response,
   _next: NextFunction

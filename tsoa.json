@@ -14,11 +14,9 @@
   "spec": {
     "outputDirectory": "src/generated",
     "specVersion": 3,
-    "info": {
-      "title": "N&A Tailors REST API",
-      "version": "1.0.0",
-      "description": "Backend API documentation for N&A Tailors tailoring, e-commerce, and custom order platform."
-    },
+    "name": "na-garments REST API",
+    "version": "1.0.0",
+    "description": "Backend API documentation for na-garments tailoring, e-commerce, and custom order platform.",
     "securityDefinitions": {
       "jwt": {
         "type": "http",

@@ -10,7 +10,7 @@ import { errorHandler } from './middleware/error.middleware';
 const app: Application = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000' }));
+app.use(cors({ origin: process.env.FRONTEND_URL || 'https://na-garments-frontend.vercel.app', }));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -19,7 +19,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerJson));
 
 // Health Check
 app.get('/health', (_req: Request, res: Response) => {
-  res.status(200).json({ success: true, message: 'N&A Tailors API is running' });
+  res.status(200).json({ success: true, message: 'na-garments API is running' });
 });
 
 RegisterRoutes(app);
