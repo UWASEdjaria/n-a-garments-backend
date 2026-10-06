@@ -1,7 +1,7 @@
 import { PrismaClient, Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage } from '@prisma/client';
-import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from '../interfaces/product.interface';
-import { AppError } from '../utils/appError';
-import { ImageService } from './image.service';
+import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from '../interfaces/product.interface.js';
+import { AppError } from '../utils/appError.js';
+import { ImageService } from './image.service.js';
 
 const prisma = new PrismaClient();
 
@@ -17,7 +17,8 @@ export class ProductsServices {
   }
 
   private format(p: PrismaProductWithImages): Product {
-    return { ...p, price: Number(p.price), stockStatus: this.getStockStatus(p.stockQuantity, p.minimumStockLevel) };
+    const primaryImageUrl = p.images?.find((img) => img.isPrimary)?.url || p.images?.[0]?.url;
+    return { ...p, price: Number(p.price), stockStatus: this.getStockStatus(p.stockQuantity, p.minimumStockLevel),imageUrl: primaryImageUrl, };
   }
 
   private async resolveImageUrl(image?: Express.Multer.File, imageUrl?: string): Promise<string | undefined> {
@@ -62,7 +63,8 @@ export class ProductsServices {
     const skip = (page - 1) * limit;
 
     const where: Prisma.ProductWhereInput = {};
-    if (filters.name) where.name = { contains: filters.name, mode: 'insensitive' };
+   if (filters.search) { where.OR = [ {   name: { contains: filters.search, mode: 'insensitive',}, }, {   description: { contains: filters.search, mode: 'insensitive',}, }, {
+      slug: {contains: filters.search,mode: 'insensitive',},},{category: {  name: {contains: filters.search, mode: 'insensitive',},}, },];}
     if (filters.categoryId) where.categoryId = filters.categoryId;
     if (filters.slug) where.slug = filters.slug;
 

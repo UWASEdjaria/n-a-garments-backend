@@ -4,8 +4,8 @@ import {
   UpdateCategoryRequest, 
   CategorySingleResponse, 
   CategoryListResponse 
-} from '../interfaces/category.interface';
-import { AppError } from '../utils/appError';
+} from '../interfaces/category.interface.js';
+import { AppError } from '../utils/appError.js';
 
 const prisma = new PrismaClient();
 
@@ -40,6 +40,7 @@ export class CategoryService {
         name: body.name.trim(),
         slug,
         description: body.description ? body.description.trim() : null,
+        imageUrl: body.imageUrl ? body.imageUrl.trim() : null,
       },
     });
 
@@ -97,7 +98,7 @@ export class CategoryService {
       throw new AppError('Category not found.', 404);
     }
 
-    const updateData: { name?: string; slug?: string; description?: string | null } = {};
+    const updateData: { name?: string; slug?: string; description?: string | null; imageUrl?: string | null } = {};
 
     if (body.name !== undefined) {
       const trimmedName = body.name.trim();
@@ -126,12 +127,15 @@ export class CategoryService {
     if (body.description !== undefined) {
       updateData.description = body.description ? body.description.trim() : null;
     }
+    if (body.imageUrl !== undefined) {
+      updateData.imageUrl = body.imageUrl ? body.imageUrl.trim() : null;
+    }
 
     const updatedCategory = await prisma.category.update({
       where: { id },
       data: updateData,
     });
-
+    
     return {
       success: true,
       message: 'Category updated successfully',
