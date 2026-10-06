@@ -5,8 +5,8 @@ import {
   ContactMessageSingleResponse,
   CreateContactMessageRequest,
   UpdateContactMessageReadRequest,
-} from '../interfaces/contact.interface';
-import { AppError } from '../utils/appError';
+} from '../interfaces/contact.interface.js';
+import { AppError } from '../utils/appError.js';
 
 const prisma = new PrismaClient();
 

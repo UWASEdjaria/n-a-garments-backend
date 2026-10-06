@@ -1,10 +1,10 @@
 import { PrismaClient, User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { generateToken } from '../config/jwt';
-import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, JwtPayload, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface';
-import { AppError } from '../utils/appError';
-import { sendPasswordResetEmail } from '../utils/email';
+import { generateToken } from '../config/jwt.js';
+import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, JwtPayload, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface.js';
+import { AppError } from '../utils/appError.js';
+import { sendPasswordResetEmail } from '../utils/email.js';
 
 const prisma = new PrismaClient();
 

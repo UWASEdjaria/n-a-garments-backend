@@ -7,6 +7,185 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id               String         @id @default(uuid())
+  name             String
+  email            String         @unique
+  phone            String?
+  passwordHash     String
+  role             Role           @default(CUSTOMER)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  cart             Cart?
+  customOrders     CustomOrder[]
+  orders           Order[]
+  wishlistItems    WishlistItem[]
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  imageUrl    String?
+  products    Product[]
+}
+
+model Product {
+  id                String         @id @default(uuid())
+  name              String
+  slug              String         @unique
+  description       String
+  price             Decimal        @db.Decimal(10, 2)
+  stockQuantity     Int            @default(0)
+  minimumStockLevel Int            @default(5)
+  isAvailable       Boolean        @default(true)
+  categoryId        String
+  sizes             String[]
+  colors            String[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
+  category          Category       @relation(fields: [categoryId], references: [id])
+  images            ProductImage[]
+  stockEntries      StockEntry[]
+  wishlistItems     WishlistItem[]
+}
+
+model StockEntry {
+  id           String   @id @default(uuid())
+  productId    String
+  quantity     Int
+  unitCost     Decimal  @db.Decimal(10, 2)
+  supplierNote String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductImage {
+  id        String  @id @default(uuid())
+  url       String
+  isPrimary Boolean @default(false)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String  @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int
+  size      String?
+  color     String?
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  userId        String?
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  shippingAddr  String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  guestName     String?
+  guestEmail    String?
+  guestPhone    String?
+  user          User?         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items         OrderItem[]
+  payments      Payment[]
+}
+
+model OrderItem {
+  id            String  @id @default(uuid())
+  orderId       String
+  productId     String
+  quantity      Int
+  purchasePrice Decimal @db.Decimal(10, 2)
+  size          String?
+  color         String?
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product @relation(fields: [productId], references: [id])
+}
+
+model CustomOrder {
+  id                 String        @id @default(uuid())
+  userId             String?
+  name               String
+  email              String
+  phone              String
+  garmentType        String
+  quantity           Int
+  measurements       String?
+  description        String
+  additionalReqs     String?
+  referenceImageUrls String[]
+  status             OrderStatus   @default(PENDING)
+  paymentStatus      PaymentStatus @default(PENDING)
+  adminNotes         String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  user               User?         @relation(fields: [userId], references: [id])
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  names     String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id            String              @id @default(uuid())
+  orderId       String
+  amount        Decimal             @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  status        PaymentRecordStatus @default(PENDING)
+  ref           String              @unique
+  phoneNumber   String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model playing_with_neon {
+  id    Int    @id @default(autoincrement())
+  name  String
+  value Float? @db.Real
+}
+
 enum Role {
   CUSTOMER
   ADMIN
@@ -42,176 +221,4 @@ enum PaymentRecordStatus {
   SUCCESSFUL
   FAILED
   CANCELLED
-}
-
-model User {
-  id               String        @id @default(uuid())
-  name             String
-  email            String        @unique
-  phone            String?
-  passwordHash     String
-  role             Role          @default(CUSTOMER)
-  resetToken       String?
-  resetTokenExpiry DateTime?
-  orders           Order[]
-  cart             Cart?
-  wishlistItems    WishlistItem[]
-  customOrders     CustomOrder[]
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-}
-
-model Category {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  slug        String    @unique
-  description String?
-  imageUrl    String?
-  products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Product {
-  id                String         @id @default(uuid())
-  name              String
-  slug              String         @unique
-  description       String
-  price             Decimal        @db.Decimal(10, 2)
-  stockQuantity     Int            @default(0)
-  minimumStockLevel Int            @default(5)
-  isAvailable       Boolean        @default(true)
-  categoryId        String
-  category          Category       @relation(fields: [categoryId], references: [id])
-  stockEntries      StockEntry[]
-  images            ProductImage[]
-  sizes             String[] // e.g., ["S", "M", "L"]
-  colors            String[] // e.g., ["Black", "White"]
-  cartItems         CartItem[]
-  orderItems        OrderItem[]
-  wishlistItems     WishlistItem[]
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-}
-model StockEntry {
-  id           String   @id @default(uuid())
-  productId    String
-  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity     Int
-  unitCost     Decimal  @db.Decimal(10, 2)
-  supplierNote String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model ProductImage {
-  id        String  @id @default(uuid())
-  url       String
-  isPrimary Boolean @default(false)
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-}
-
-model Cart {
-  id        String     @id @default(uuid())
-  userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items     CartItem[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-}
-
-model CartItem {
-  id        String  @id @default(uuid())
-  cartId    String
-  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-  quantity  Int
-  size      String?
-  color     String?
-}
-
-model Order {
-  id            String        @id @default(uuid())
-  userId        String?
-  user          User?         @relation(fields: [userId], references: [id], onDelete: Restrict)
-  guestName     String?
-  guestEmail    String?
-  guestPhone    String?
-  totalAmount   Decimal       @db.Decimal(10, 2)
-  status        OrderStatus   @default(PENDING)
-  paymentStatus PaymentStatus @default(PENDING)
-  items         OrderItem[]
-  payments      Payment[]
-  shippingAddr  String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-}
-
-model OrderItem {
-  id            String  @id @default(uuid())
-  orderId       String
-  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId     String
-  product       Product @relation(fields: [productId], references: [id])
-  quantity      Int
-  purchasePrice Decimal @db.Decimal(10, 2)
-  size          String?
-  color         String?
-}
-
-model CustomOrder {
-  id                 String        @id @default(uuid())
-  userId             String?
-  user               User?         @relation(fields: [userId], references: [id])
-  name               String
-  email              String
-  phone              String
-  garmentType        String
-  quantity           Int
-  measurements       String?
-  description        String
-  additionalReqs     String?
-  referenceImageUrls String[]
-  status             OrderStatus   @default(PENDING)
-  paymentStatus      PaymentStatus @default(PENDING)
-  adminNotes         String?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-}
-
-model WishlistItem {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, productId])
-}
-
-model ContactMessage {
-  id        String   @id @default(uuid())
-  names     String
-  email     String
-  phone     String?
-  subject   String?
-  message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-}
-
-model Payment {
-  id            String              @id @default(uuid())
-  orderId       String
-  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  amount        Decimal             @db.Decimal(10, 2)
-  paymentMethod PaymentMethod
-  status        PaymentRecordStatus @default(PENDING)
-  ref           String              @unique
-  phoneNumber   String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
 }

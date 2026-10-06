@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { PrismaClient, type Payment, type Prisma } from '@prisma/client';
-import { InitiateGuestPaymentDTO, InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse, PaymentAttemptSummary } from '../interfaces/payment.interface';
-import { AppError } from '../utils/appError';
-import { PaypackRequestError, PaypackService } from './paypack.service';
+import { InitiateGuestPaymentDTO, InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse, PaymentAttemptSummary } from '../interfaces/payment.interface.js';
+import { AppError } from '../utils/appError.js';
+import { PaypackRequestError, PaypackService } from './paypack.service.js';
 
 const prisma = new PrismaClient();
 const configuredPendingMinutes = Number.parseInt(process.env.PAYMENT_PENDING_TIMEOUT_MINUTES || '15', 10);

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { MiddlewareError } from '../interfaces/error.interface';
+import { MiddlewareError } from '../interfaces/error.interface.js';
 
 export const errorHandler = (
   err: MiddlewareError,

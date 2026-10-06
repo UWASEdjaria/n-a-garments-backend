@@ -1,7 +1,7 @@
 import { Controller, Route, Post, Get, Put, Delete, Body, Path, Query, SuccessResponse, Response, Tags, Security } from 'tsoa';
-import { CategoryService } from '../services/category.service';
-import { CreateCategoryRequest, UpdateCategoryRequest, CategorySingleResponse, CategoryListResponse } from '../interfaces/category.interface';
-import { StandardErrorResponse } from '../interfaces/auth.interface';
+import { CategoryService } from '../services/category.service.js';
+import { CreateCategoryRequest, UpdateCategoryRequest, CategorySingleResponse, CategoryListResponse } from '../interfaces/category.interface.js';
+import { StandardErrorResponse } from '../interfaces/auth.interface.js';
 
 const categoryService = new CategoryService();
 
