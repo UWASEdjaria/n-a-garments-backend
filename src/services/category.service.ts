@@ -4,8 +4,8 @@ import {
   UpdateCategoryRequest, 
   CategorySingleResponse, 
   CategoryListResponse 
-} from '../interfaces/category.interface';
-import { AppError } from '../utils/appError';
+} from '../interfaces/category.interface.js';
+import { AppError } from '../utils/appError.js';
 
 const prisma = new PrismaClient();
 

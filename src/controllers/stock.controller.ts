@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Path, Post, Put, Query, Route, Security, SuccessResponse, Tags } from "tsoa";
-import { AddStockDTO, EditStockDTO, StockEntry } from "../interfaces/stock.interface";
-import { StockService } from "../services/stock.service";
-import { addStockSchema, editStockSchema } from "../validators/stock.validator";
+import { AddStockDTO, EditStockDTO, StockEntry } from "../interfaces/stock.interface.js";
+import { StockService } from "../services/stock.service.js";
+import { addStockSchema, editStockSchema } from "../validators/stock.validator.js";
 
 @Route("stock")
 @Tags("Stock")

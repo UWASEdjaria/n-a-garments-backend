@@ -1,8 +1,8 @@
 import { Controller, Route, Post, Get, Body, SuccessResponse, Response, Tags, Security, Request } from 'tsoa';
 import express from 'express';
-import { AuthService } from '../services/auth.service';
-import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, StandardErrorResponse, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface';
-import { getUser } from '../utils/getUser';
+import { AuthService } from '../services/auth.service.js';
+import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, StandardErrorResponse, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface.js';
+import { getUser } from '../utils/getUser.js';
 
 const authService = new AuthService();
 

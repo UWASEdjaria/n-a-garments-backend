@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { AppError } from '../utils/appError';
+import { AppError } from '../utils/appError.js';
 
 interface PaypackConfigOptions {
   client_id: string;
