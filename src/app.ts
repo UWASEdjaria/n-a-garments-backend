@@ -3,14 +3,14 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
-import { RegisterRoutes } from './generated/routes';
-import swaggerJson from './generated/swagger.json';
-import { errorHandler } from './middleware/error.middleware';
+import { RegisterRoutes } from './generated/routes.js';
+import swaggerJson from './generated/swagger.json' with { type: 'json' };
+import { errorHandler } from './middleware/error.middleware.js';
 
 const app: Application = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: process.env.FRONTEND_URL || 'https://na-garments-frontend.vercel.app', }));
+app.use(cors({ origin: [process.env.FRONTEND_URL, 'http://localhost:3000'].filter((origin): origin is string => Boolean(origin)), }));
 app.use(express.json());
 app.use(morgan('dev'));
 

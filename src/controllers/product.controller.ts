@@ -1,9 +1,9 @@
 import { Controller, Delete, FormField, Get, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags, UploadedFile } from 'tsoa';
-import { CreateProductDTO, UpdateProductDTO, Product } from '../interfaces/product.interface';
-import { StandardErrorResponse } from '../interfaces/auth.interface';
-import { ProductsServices } from '../services/product.service';
-import { createProductSchema, ALLOWED_SIZES, ALLOWED_COLORS } from '../validators/product.validator';
-import { AppError } from '../utils/appError';
+import { CreateProductDTO, UpdateProductDTO, Product } from '../interfaces/product.interface.js';
+import { StandardErrorResponse } from '../interfaces/auth.interface.js';
+import { ProductsServices } from '../services/product.service.js';
+import { createProductSchema, ALLOWED_SIZES, ALLOWED_COLORS } from '../validators/product.validator.js';
+import { AppError } from '../utils/appError.js';
 
 const parseArray = (value?: string): string[] => {
   if (!value) return [];

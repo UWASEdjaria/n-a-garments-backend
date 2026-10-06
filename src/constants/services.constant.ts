@@ -1,4 +1,4 @@
-import { ServiceCategory } from "../interfaces/ServiceCategory.interface";
+import { ServiceCategory } from "../interfaces/ServiceCategory.interface.js";
 
 export const TAILORING_SERVICES: ServiceCategory[] = [
   {

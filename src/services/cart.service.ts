@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { AddCartItemRequest, UpdateCartItemRequest, CartResponse } from '../interfaces/cart.interface';
-import { AppError } from '../utils/appError';
+import { AddCartItemRequest, UpdateCartItemRequest, CartResponse } from '../interfaces/cart.interface.js';
+import { AppError } from '../utils/appError.js';
 
 const prisma = new PrismaClient();
 

@@ -1,7 +1,7 @@
 import { PrismaClient, Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage } from '@prisma/client';
-import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from '../interfaces/product.interface';
-import { AppError } from '../utils/appError';
-import { ImageService } from './image.service';
+import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from '../interfaces/product.interface.js';
+import { AppError } from '../utils/appError.js';
+import { ImageService } from './image.service.js';
 
 const prisma = new PrismaClient();
 
@@ -51,7 +51,7 @@ export class ProductsServices {
           images: { create: { url: resolvedUrl, isPrimary: true } },
         }),
       },
-      include: { images: true },
+      include: { images: true,  category: true, },
     });
 
     return this.format(product);
