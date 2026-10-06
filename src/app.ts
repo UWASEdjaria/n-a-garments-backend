@@ -3,9 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
-import { RegisterRoutes } from './generated/routes';
-import swaggerJson from './generated/swagger.json';
-import { errorHandler } from './middleware/error.middleware';
+import { RegisterRoutes } from './generated/routes.js';
+import swaggerJson from './generated/swagger.json' with { type: 'json' };
+import { errorHandler } from './middleware/error.middleware.js';
 
 const app: Application = express();
 

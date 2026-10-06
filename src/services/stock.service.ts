@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import { AddStockDTO, EditStockDTO, StockEntry } from "../interfaces/stock.interface";
-import { AppError } from "../utils/appError";
+import { AddStockDTO, EditStockDTO, StockEntry } from "../interfaces/stock.interface.js";
+import { AppError } from "../utils/appError.js";
 
 const prisma = new PrismaClient();
 
