@@ -51,7 +51,7 @@ export class ProductsServices {
           images: { create: { url: resolvedUrl, isPrimary: true } },
         }),
       },
-      include: { images: true },
+      include: { images: true,  category: true, },
     });
 
     return this.format(product);

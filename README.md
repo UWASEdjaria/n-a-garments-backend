@@ -18,7 +18,7 @@ Set the environment variables in the process environment or your deployment plat
 | `JWT_SECRET` | Yes | Secret used to sign and verify JWTs. |
 | `JWT_EXPIRES_IN` | No | Token lifetime; defaults to `7d`. |
 | `PORT` | No | HTTP port; defaults to `5000`. |
-| `FRONTEND_URL` | No | Allowed CORS origin and password-reset link origin; defaults to `http://localhost:3000`. |
+| `FRONTEND_URL` | No | Allowed CORS origin and password-reset link origin; defaults to `https://na-garments-frontend.vercel.app`. |
 | `PAYMENT_PENDING_TIMEOUT_MINUTES` | No | Time before an unanswered pending payment can be retried; defaults to `15` minutes. |
 | `CLOUDINARY_CLOUD_NAME` | For image uploads | Cloudinary cloud name. |
 | `CLOUDINARY_API_KEY` | For image uploads | Cloudinary API key. |
