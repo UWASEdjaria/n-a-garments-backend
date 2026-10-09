@@ -19,13 +19,13 @@ export const sendPasswordResetEmail = async (
     await transporter.sendMail({
       from:
         process.env.EMAIL_FROM ||
-        `"na-garments" <${process.env.EMAIL_USER}>`,
+        `"nagarments" <${process.env.EMAIL_USER}>`,
       to,
-      subject: 'Reset Your Password — na-garments',
+      subject: 'Reset Your Password — nagarments',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Hello, ${name}</h2>
-          <p>You requested a password reset for your na-garments account.</p>
+          <p>You requested a password reset for your nagarments account.</p>
           <p>
             Click the button below to reset your password.
             This link expires in <strong>30 minutes</strong>.
@@ -43,7 +43,7 @@ export const sendPasswordResetEmail = async (
             your password will remain unchanged.
           </p>
 
-          <p>— na-garments Team</p>
+          <p>— nagarments Team</p>
         </div>
       `,
     });
@@ -68,7 +68,7 @@ export const sendCustomOrderEmail = async (
     await transporter.sendMail({
       from:
         process.env.EMAIL_FROM ||
-        `"N&A Garments" <${process.env.EMAIL_USER}>`,
+        `"nagarments" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
       replyTo: email,
       subject: `New Custom Order Request — ${name}`,
@@ -76,7 +76,7 @@ export const sendCustomOrderEmail = async (
         <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; color: #111111;">
           <div style="background: #123B5D; padding: 24px; text-align: center;">
             <h1 style="color: #ffffff; margin: 0;">
-              N&A Garments
+              nagarments
             </h1>
 
             <p style="color: #ffffff; margin: 8px 0 0;">
@@ -157,7 +157,7 @@ export const sendCustomOrderEmail = async (
           </div>
 
           <div style="padding: 16px; text-align: center; color: #666666;">
-            <p>— N&A Garments Team</p>
+            <p>— nagarments Team</p>
           </div>
         </div>
       `,
@@ -165,5 +165,51 @@ export const sendCustomOrderEmail = async (
   } catch (error) {
     console.error('Failed to send custom order email:', error);
     throw new Error('Could not send custom order email.');
+  }
+};
+
+export const sendVerificationEmail = async (
+  to: string,
+  name: string,
+  verificationUrl: string
+): Promise<void> => {
+  
+  try {
+    await transporter.sendMail({
+      from:
+        process.env.EMAIL_FROM ||
+        `"NA-GARMENTS" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: 'Verify Your Email — NA-GARMENTS',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111111;">
+          <div style="background: #123B5D; padding: 24px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0;">NA-GARMENTS</h1>
+          </div>
+
+          <div style="padding: 24px;">
+            <h2>Hello, ${name}</h2>
+
+            <p>Thank you for creating your NA-GARMENTS account.</p>
+            <p>Please verify your email address by clicking the button below.</p>
+
+            <a
+              href="${verificationUrl}"
+              style="display: inline-block; padding: 12px 24px; background: #123B5D; color: #ffffff; text-decoration: none; border-radius: 4px; margin: 16px 0;"
+            >
+              Verify Email
+            </a>
+
+            <p>This link expires in 30 minutes.</p>
+            <p>If you did not create this account, you can ignore this email.</p>
+
+            <p>NA-GARMENTS Team</p>
+          </div>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Failed to send verification email:', error);
+    throw new Error('Could not send verification email.');
   }
 };

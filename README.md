@@ -30,7 +30,7 @@ Set the environment variables in the process environment or your deployment plat
 | `EMAIL_SECURE` | For email | Set to `true` to enable secure SMTP. |
 | `EMAIL_USER` | For email | SMTP username. |
 | `EMAIL_PASS` | For email | SMTP password. |
-| `EMAIL_FROM` | No | Sender address; defaults to the `na-garments` name and `EMAIL_USER`. |
+| `EMAIL_FROM` | No | Sender address; defaults to the `nagarments` name and `EMAIL_USER`. |
 | `ADMIN_EMAIL` | For database seeding | Initial admin email; the seed script has a fallback if unset. |
 | `ADMIN_PASSWORD` | For database seeding | Initial admin password; set a strong value before seeding. |
 

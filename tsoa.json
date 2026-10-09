@@ -14,9 +14,9 @@
   "spec": {
     "outputDirectory": "src/generated",
     "specVersion": 3,
-    "name": "na-garments REST API",
+    "name": "nagarments REST API",
     "version": "1.0.0",
-    "description": "Backend API documentation for na-garments tailoring, e-commerce, and custom order platform.",
+    "description": "Backend API documentation for nagarments tailoring, e-commerce, and custom order platform.",
     "securityDefinitions": {
       "jwt": {
         "type": "http",
