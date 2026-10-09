@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { generateToken } from '../config/jwt.js';
 import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, JwtPayload, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface.js';
 import { AppError } from '../utils/appError.js';
-import { sendPasswordResetEmail } from '../utils/email.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/email.js';
 
 const prisma = new PrismaClient();
 
@@ -28,40 +28,87 @@ export class AuthService {
     return user;
   }
 
-  async register(body: RegisterRequest): Promise<AuthResponse> {
-    const { name, email, password, confirmPassword, phone } = body;
+  async register(body: RegisterRequest): Promise<MessageResponse> {
+  const { name, email, password, confirmPassword, phone } = body;
 
-    if (!name || !email || !password || !confirmPassword)
-      throw new AppError('Name, email, password, and confirm password are required.', 400);
-
-    if (password !== confirmPassword)
-      throw new AppError('Passwords do not match.', 400);
-
-    if (password.length < 6)
-      throw new AppError('Password must be at least 6 characters long.', 400);
-
-    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
-    if (existing) throw new AppError('User with this email already exists.', 409);
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        passwordHash,
-        phone: phone ? phone.trim() : null,
-        role: 'CUSTOMER',
-      },
-    });
-
-    return this.buildAuthResponse(user, 'Registration successful');
+  if (!name || !email || !password || !confirmPassword) {
+    throw new AppError(
+      'Name, email, password, and confirm password are required.',
+      400
+    );
   }
+
+  if (password !== confirmPassword) {
+    throw new AppError('Passwords do not match.', 400);
+  }
+
+  if (password.length < 6) {
+    throw new AppError('Password must be at least 6 characters long.', 400);
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  const existing = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (existing) {
+    throw new AppError('User with this email already exists.', 409);
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const verificationExpiry = new Date(Date.now() + 30 * 60 * 1000);
+
+  const user = await prisma.user.create({
+    data: {
+      name: name.trim(),
+      email: normalizedEmail,
+      passwordHash,
+      phone: phone ? phone.trim() : null,
+      role: 'CUSTOMER',
+      isEmailVerified: false,
+      emailVerificationToken: verificationToken,
+      emailVerificationTokenExpiry: verificationExpiry,
+    },
+  });
+
+  const verificationUrl =
+    `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+
+  try {
+    await sendVerificationEmail(user.email, user.name, verificationUrl);
+  } catch {
+    await prisma.user.delete({ where: { id: user.id } });
+
+    throw new AppError(
+      'Unable to send verification email. Please try registering again.',
+      500
+    );
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[DEV] Customer registration successful for ${user.email}. Email verification token: ${verificationToken}`);
+  }
+
+  return {
+    success: true,
+    message: 'Registration successful. Please check your email to verify your account.',
+  };
+}
 
   async login(body: LoginRequest): Promise<AuthResponse> {
-    const user = await this.findAndVerifyUser(body.email, body.password);
-    return this.buildAuthResponse(user, 'Login successful');
-  }
+const user = await this.findAndVerifyUser(body.email, body.password);
+if (!user.isEmailVerified) {
+  throw new AppError(
+    'Please verify your email before logging in.',
+    403
+  );
+}
+return this.buildAuthResponse(user, 'Login successful');
+
+}
+
 
   async getMe(authUser: JwtPayload): Promise<{ success: boolean; data: AuthUserData }> {
     const user = await prisma.user.findUnique({
@@ -132,4 +179,37 @@ export class AuthService {
 
     return { success: true, message: 'Password reset successfully. You can now log in.' };
   }
+
+  async verifyEmail(token: string): Promise<MessageResponse> {
+  if (!token) {
+    throw new AppError('Verification token is required.', 400);
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      emailVerificationToken: token,
+      emailVerificationTokenExpiry: {
+        gt: new Date(),
+      },
+    },
+  });
+
+  if (!user) {
+    throw new AppError('Invalid or expired verification link.', 400);
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      isEmailVerified: true,
+      emailVerificationToken: null,
+      emailVerificationTokenExpiry: null,
+    },
+  });
+
+  return {
+    success: true,
+    message: 'Email verified successfully. You can now log in.',
+  };
+}
 }

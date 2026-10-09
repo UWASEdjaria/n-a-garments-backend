@@ -18,6 +18,9 @@ model User {
   updatedAt        DateTime       @updatedAt
   resetToken       String?
   resetTokenExpiry DateTime?
+  isEmailVerified              Boolean   @default(true)
+  emailVerificationToken       String?
+  emailVerificationTokenExpiry DateTime?
   cart             Cart?
   customOrders     CustomOrder[]
   orders           Order[]

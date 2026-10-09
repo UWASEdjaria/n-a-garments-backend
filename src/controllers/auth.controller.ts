@@ -1,4 +1,4 @@
-import { Controller, Route, Post, Get, Body, SuccessResponse, Response, Tags, Security, Request } from 'tsoa';
+import { Controller, Route,Query, Post, Get, Body, SuccessResponse, Response, Tags, Security, Request } from 'tsoa';
 import express from 'express';
 import { AuthService } from '../services/auth.service.js';
 import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, StandardErrorResponse, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface.js';
@@ -12,10 +12,10 @@ export class AuthController extends Controller {
 
   /** Registers a new customer */
   @Post('register')
-  @SuccessResponse('201', 'Created')
+  @SuccessResponse('201','Registration successful. Verification email sent')
   @Response<StandardErrorResponse>(400, 'Bad Request')
   @Response<StandardErrorResponse>(409, 'Conflict - Email already exists')
-  public async register(@Body() requestBody: RegisterRequest): Promise<AuthResponse> {
+  public async register(@Body() requestBody: RegisterRequest): Promise<MessageResponse> {
     const result = await authService.register(requestBody);
     this.setStatus(201);
     return result;
@@ -53,5 +53,13 @@ export class AuthController extends Controller {
   @Response<StandardErrorResponse>(400, 'Invalid or expired token')
   public async resetPassword(@Body() requestBody: ResetPasswordRequest): Promise<MessageResponse> {
     return authService.resetPassword(requestBody);
+  }
+  
+    /** Verifies a customer's email address */
+  @Get('verify-email')
+  @SuccessResponse('200', 'Email verified successfully')
+  @Response<StandardErrorResponse>(400, 'Invalid or expired verification link')
+  public async verifyEmail(@Query() token: string): Promise<MessageResponse> {
+    return authService.verifyEmail(token);
   }
 }
