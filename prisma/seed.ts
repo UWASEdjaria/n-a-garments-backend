@@ -4,16 +4,39 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@natailors.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'SecureAdminPassword123!';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@ngarmentss.com').toLowerCase().trim();
+  const adminPassword = process.env.ADMIN_PASSWORD || 'nagarmentssTailoring@12345!';
 
-  const existingAdmin = await prisma.user.findUnique({
+  const userWithAdminEmail = await prisma.user.findUnique({
     where: { email: adminEmail },
   });
 
-  if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+  if (userWithAdminEmail && userWithAdminEmail.role !== 'ADMIN') {
+    throw new Error(`Cannot seed admin: ${adminEmail} belongs to a non-admin user.`);
+  }
 
+  let existingAdmin = userWithAdminEmail;
+  if (!existingAdmin) {
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, take: 2 });
+    if (admins.length > 1) {
+      throw new Error('Cannot determine which existing admin to update. Set ADMIN_EMAIL to an existing admin email.');
+    }
+    existingAdmin = admins[0] ?? null;
+  }
+
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+  if (existingAdmin) {
+    await prisma.user.update({
+      where: { id: existingAdmin.id },
+      data: {
+        name: 'Super Admin',
+        email: adminEmail,
+        passwordHash: hashedPassword,
+        role: 'ADMIN',
+      },
+    });
+    console.log(`✅ Admin user credentials updated: ${adminEmail}`);
+  } else {
     await prisma.user.create({
       data: {
         name: 'Super Admin',
@@ -23,8 +46,6 @@ async function main() {
       },
     });
     console.log(`✅ Admin user created: ${adminEmail}`);
-  } else {
-    console.log('⚠️ Admin user already exists.');
   }
 
   console.log('Seeding categories and products...');
