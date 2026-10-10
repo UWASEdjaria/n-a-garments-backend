@@ -7,6 +7,77 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
+			"ContactMessageResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"success",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StandardErrorResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean",
+						"enum": [
+							false
+						],
+						"nullable": false
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"type": "number",
+						"enum": [
+							null
+						],
+						"nullable": true
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateContactMessageRequest": {
+				"properties": {
+					"names": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string"
+					},
+					"subject": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"names",
+					"email",
+					"subject",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"CategoryData": {
 				"properties": {
 					"id": {
@@ -75,34 +146,6 @@
 					},
 					"data": {
 						"$ref": "#/components/schemas/CategoryData"
-					}
-				},
-				"required": [
-					"success",
-					"message",
-					"data"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"StandardErrorResponse": {
-				"properties": {
-					"success": {
-						"type": "boolean",
-						"enum": [
-							false
-						],
-						"nullable": false
-					},
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"type": "number",
-						"enum": [
-							null
-						],
-						"nullable": true
 					}
 				},
 				"required": [
@@ -321,6 +364,49 @@
 		"contact": {}
 	},
 	"paths": {
+		"/contact": {
+			"post": {
+				"operationId": "CreateMessage",
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ContactMessageResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Store a public contact message",
+				"tags": [
+					"Contact"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateContactMessageRequest"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/categories": {
 			"get": {
 				"operationId": "GetAllCategories",

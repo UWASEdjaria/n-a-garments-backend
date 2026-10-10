@@ -4,6 +4,8 @@
 import type { TsoaRoute } from '@tsoa/runtime';
 import {  fetchMiddlewares, ExpressTemplateService } from '@tsoa/runtime';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { ContactController } from './../controllers/contact.controller';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { CategoryController } from './../controllers/category.controller';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AuthController } from './../controllers/auth.controller';
@@ -17,6 +19,37 @@ const expressAuthenticationRecasted = expressAuthentication as (req: ExRequest, 
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
 const models: TsoaRoute.Models = {
+    "ContactMessageResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "success": {"dataType":"boolean","required":true},
+            "message": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "StandardErrorResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "success": {"dataType":"enum","enums":[false],"required":true},
+            "message": {"dataType":"string","required":true},
+            "data": {"dataType":"enum","enums":[null],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CreateContactMessageRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "names": {"dataType":"string","required":true},
+            "email": {"dataType":"string","required":true},
+            "phone": {"dataType":"string"},
+            "subject": {"dataType":"string","required":true},
+            "message": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CategoryData": {
         "dataType": "refObject",
         "properties": {
@@ -46,16 +79,6 @@ const models: TsoaRoute.Models = {
             "success": {"dataType":"boolean","required":true},
             "message": {"dataType":"string","required":true},
             "data": {"ref":"CategoryData","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "StandardErrorResponse": {
-        "dataType": "refObject",
-        "properties": {
-            "success": {"dataType":"enum","enums":[false],"required":true},
-            "message": {"dataType":"string","required":true},
-            "data": {"dataType":"enum","enums":[null],"required":true},
         },
         "additionalProperties": false,
     },
@@ -179,6 +202,36 @@ export function RegisterRoutes(app: Router) {
 
 
     
+        const argsContactController_createMessage: Record<string, TsoaRoute.ParameterSchema> = {
+                requestBody: {"in":"body","name":"requestBody","required":true,"ref":"CreateContactMessageRequest"},
+        };
+        app.post('/contact',
+            ...(fetchMiddlewares<RequestHandler>(ContactController)),
+            ...(fetchMiddlewares<RequestHandler>(ContactController.prototype.createMessage)),
+
+            async function ContactController_createMessage(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsContactController_createMessage, request, response });
+
+                const controller = new ContactController();
+
+              await templateService.apiHandler({
+                methodName: 'createMessage',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 201,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsCategoryController_getAllCategories: Record<string, TsoaRoute.ParameterSchema> = {
                 search: {"in":"query","name":"search","dataType":"string"},
         };
