@@ -7,8 +7,10 @@ import {
   UpdateContactMessageReadRequest,
 } from '../interfaces/contact.interface.js';
 import { AppError } from '../utils/appError.js';
+import { NotificationService } from './notification.service.js';
 
 const prisma = new PrismaClient();
+const notificationService = new NotificationService();
 
 export class ContactService {
   async createMessage(body: CreateContactMessageRequest): Promise<ContactMessageSingleResponse> {
@@ -21,6 +23,20 @@ export class ContactService {
         message: body.message,
       },
     });
+
+    try {
+      await notificationService.createNotification({
+        type: 'CONTACT_MESSAGE_RECEIVED',
+        title: 'New message received',
+        message: `${body.names} sent a new message through the contact form.`,
+        resourceType: 'CONTACT_MESSAGE',
+        resourceId: contactMessage.id,
+        actorName: body.names,
+        actorEmail: body.email,
+      });
+    } catch (error) {
+      console.error('Failed to create admin notification for contact message:', error);
+    }
 
     return {
       success: true,

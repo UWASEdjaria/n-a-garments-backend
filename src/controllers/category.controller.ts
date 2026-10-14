@@ -52,6 +52,7 @@ export class CategoryController extends Controller {
   @Security('jwt', ['ADMIN'])
   @SuccessResponse('200', 'Success')
   @Response<StandardErrorResponse>(404, 'Category not found')
+  @Response<StandardErrorResponse>(409, 'Category has assigned products')
   public async deleteCategory(@Path() id: string): Promise<{ success: boolean; message: string }> {
     return categoryService.deleteCategory(id);
   }

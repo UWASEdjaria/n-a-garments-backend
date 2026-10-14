@@ -5,8 +5,10 @@ import { generateToken } from '../config/jwt.js';
 import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, JwtPayload, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface.js';
 import { AppError } from '../utils/appError.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/email.js';
+import { NotificationService } from './notification.service.js';
 
 const prisma = new PrismaClient();
+const notificationService = new NotificationService();
 
 export class AuthService {
 
@@ -89,6 +91,20 @@ export class AuthService {
 
   if (process.env.NODE_ENV === 'development') {
     console.log(`[DEV] Customer registration successful for ${user.email}. Email verification token: ${verificationToken}`);
+  }
+
+  try {
+    await notificationService.createNotification({
+      type: 'NEW_USER',
+      title: 'New customer registered',
+      message: `${user.name} registered a new account on the website.`,
+      resourceType: 'USER',
+      resourceId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
+    });
+  } catch (error) {
+    console.error('Failed to create admin notification for new user:', error);
   }
 
   return {

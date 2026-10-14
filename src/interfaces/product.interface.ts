@@ -1,4 +1,5 @@
-export type StockStatus = 'low' | 'medium' | 'overstock';
+export type StockStatus = 'out_of_stock' | 'low' | 'normal' | 'overstock';
+export type ProductType = 'READY_TO_WEAR' | 'MADE_TO_ORDER';
 
 export interface ProductImage {
   id: string;
@@ -15,7 +16,9 @@ export interface Product {
   price: number;
   stockQuantity: number;
   minimumStockLevel: number;
+  maximumStockLevel: number;
   isAvailable: boolean;
+  productType: ProductType;
   stockStatus: StockStatus;
   sizes: string[];
   colors: string[];
@@ -33,10 +36,13 @@ export interface CreateProductDTO {
   price: number;
   stockQuantity?: number;
   minimumStockLevel?: number;
+  maximumStockLevel?: number;
   sizes?: string[];
   colors?: string[];
   categoryId: string;
   imageUrl?: string;
+  isAvailable?: boolean;
+  productType?: ProductType;
 }
 
 export interface UpdateProductDTO {
@@ -46,6 +52,9 @@ export interface UpdateProductDTO {
   price?: number;
   stockQuantity?: number;
   minimumStockLevel?: number;
+  maximumStockLevel?: number;
+  isAvailable?: boolean;
+  productType?: ProductType;
   sizes?: string[];
   colors?: string[];
   categoryId?: string;

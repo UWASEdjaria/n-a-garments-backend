@@ -60,7 +60,7 @@ export const errorHandler = (
   console.error('[Internal Error]:', err);
   res.status(500).json({
     success: false,
-    message: err?.message || 'Internal Server Error',
+    message: 'Something went wrong. Please try again later.',
     data: null,
   });
 };
