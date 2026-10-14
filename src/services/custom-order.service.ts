@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type CustomOrder } from '@prisma/client';
 import {
   CreateCustomOrderRequest,
   CustomOrderData,
@@ -6,14 +6,24 @@ import {
 } from '../interfaces/custom-order.interface.js';
 import { AppError } from '../utils/appError.js';
 import { sendCustomOrderEmail } from '../utils/email.js';
+import { NotificationService } from './notification.service.js';
 
 
 const prisma = new PrismaClient();
+const notificationService = new NotificationService();
 
 export class CustomOrderService {
-  private formatCustomOrder(order: CustomOrderData): CustomOrderData {
-    return order;
-  }
+  private formatCustomOrder(
+  order: Awaited<ReturnType<typeof prisma.customOrder.findUnique>> & {}
+): CustomOrderData {
+  return {
+    ...order,
+    quoteTotal: order.quoteTotal === null ? null : Number(order.quoteTotal),
+    advanceAmount: order.advanceAmount === null ? null : Number(order.advanceAmount),
+    advancePaidAmount: Number(order.advancePaidAmount),
+    balanceAmount: order.balanceAmount === null ? null : Number(order.balanceAmount),
+  };
+}
 
   async createCustomOrder(
     userId: string | null,
@@ -43,9 +53,16 @@ export class CustomOrderService {
       throw new AppError('Description is required', 400);
     }
 
+    if (body.productId) {
+      const product = await prisma.product.findUnique({ where: { id: body.productId } });
+      if (!product) throw new AppError('Product not found', 404);
+      if (product.productType !== 'MADE_TO_ORDER') throw new AppError('Product is not available for made-to-order requests', 400);
+    }
+
     const customOrder = await prisma.customOrder.create({
       data: {
         userId,
+        productId: body.productId ?? null,
         name: body.name.trim(),
         email: body.email.trim().toLowerCase(),
         phone: body.phone.trim(),
@@ -75,6 +92,20 @@ export class CustomOrderService {
         'Custom order saved, but email notification failed:',
         error
       );
+    }
+
+    try {
+      await notificationService.createNotification({
+        type: 'CUSTOM_ORDER_RECEIVED',
+        title: 'Custom request received',
+        message: `${customOrder.name} submitted a new custom order request for ${customOrder.garmentType}.`,
+        resourceType: 'CUSTOM_ORDER',
+        resourceId: customOrder.id,
+        actorName: customOrder.name,
+        actorEmail: customOrder.email,
+      });
+    } catch (error) {
+      console.error('Failed to create admin notification for custom order:', error);
     }
 
     return this.formatCustomOrder(customOrder);

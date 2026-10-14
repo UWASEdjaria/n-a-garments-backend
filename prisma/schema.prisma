@@ -46,7 +46,9 @@ model Product {
   price             Decimal        @db.Decimal(10, 2)
   stockQuantity     Int            @default(0)
   minimumStockLevel Int            @default(5)
+  maximumStockLevel Int            @default(100)
   isAvailable       Boolean        @default(true)
+  productType       ProductType    @default(READY_TO_WEAR)
   categoryId        String
   sizes             String[]
   colors            String[]
@@ -58,10 +60,12 @@ model Product {
   images            ProductImage[]
   stockEntries      StockEntry[]
   wishlistItems     WishlistItem[]
+  customOrders      CustomOrder[]
 }
 
 model StockEntry {
   id           String   @id @default(uuid())
+  batchCode    String   @unique
   productId    String
   quantity     Int
   unitCost     Decimal  @db.Decimal(10, 2)
@@ -129,8 +133,9 @@ model OrderItem {
 }
 
 model CustomOrder {
-  id                 String        @id @default(uuid())
+  id                 String             @id @default(uuid())
   userId             String?
+  productId          String?
   name               String
   email              String
   phone              String
@@ -140,12 +145,27 @@ model CustomOrder {
   description        String
   additionalReqs     String?
   referenceImageUrls String[]
-  status             OrderStatus   @default(PENDING)
-  paymentStatus      PaymentStatus @default(PENDING)
+  status             OrderStatus        @default(PENDING)
+  paymentStatus      PaymentStatus      @default(PENDING)
   adminNotes         String?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  user               User?         @relation(fields: [userId], references: [id])
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User?              @relation(fields: [userId], references: [id])
+  product            Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // Quote fields
+  quoteStatus        QuoteStatus        @default(PENDING)
+  quoteTotal         Decimal?           @db.Decimal(10, 2)
+  advanceAmount      Decimal?           @db.Decimal(10, 2)
+  advancePaidAmount  Decimal            @default(0) @db.Decimal(10, 2)
+  balanceAmount      Decimal?           @db.Decimal(10, 2)
+  quoteProposedAt    DateTime?
+  acceptedAt         DateTime?
+  declinedAt         DateTime?
+  productionStatus   ProductionStatus   @default(NOT_STARTED)
+  completedAt        DateTime?
+
+  payments           Payment[]
 }
 
 model WishlistItem {
@@ -170,17 +190,34 @@ model ContactMessage {
   createdAt DateTime @default(now())
 }
 
+model AdminNotification {
+  id           String            @id @default(uuid())
+  type         NotificationType
+  title        String
+  message      String
+  resourceType String?
+  resourceId   String?
+  actorName    String?
+  actorEmail   String?
+  isRead       Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
 model Payment {
   id            String              @id @default(uuid())
-  orderId       String
+  orderId       String?
+  customOrderId String?
   amount        Decimal             @db.Decimal(10, 2)
   paymentMethod PaymentMethod
   status        PaymentRecordStatus @default(PENDING)
   ref           String              @unique
   phoneNumber   String?
+  providerEventId String?           @unique
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
-  order         Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order         Order?              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customOrder   CustomOrder?        @relation(fields: [customOrderId], references: [id], onDelete: Cascade)
 }
 
 model playing_with_neon {
@@ -224,4 +261,31 @@ enum PaymentRecordStatus {
   SUCCESSFUL
   FAILED
   CANCELLED
+}
+
+enum ProductType {
+  READY_TO_WEAR
+  MADE_TO_ORDER
+}
+
+enum QuoteStatus {
+  PENDING
+  PROPOSED
+  ACCEPTED
+  DECLINED
+}
+
+enum ProductionStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum NotificationType {
+  NEW_USER
+  ORDER_RECEIVED
+  CUSTOM_ORDER_RECEIVED
+  CONTACT_MESSAGE_RECEIVED
+  CART_ACTIVITY
+  SYSTEM
 }

@@ -4,6 +4,8 @@ export const addStockSchema = z.object({
   productId: z.string({
     error: (issue) => issue.input === undefined ? "Product ID is required" : undefined,
   }).min(1, "Product ID cannot be empty"),
+
+  batchCode: z.string().trim().min(1, "Batch code cannot be empty").max(60, "Batch code is too long").optional(),
   
   quantity: z
     .number({
@@ -22,6 +24,7 @@ export const addStockSchema = z.object({
 });
 
 export const editStockSchema = z.object({
+  batchCode: z.string().trim().min(1, "Batch code cannot be empty").max(60, "Batch code is too long").optional(),
   quantity: z
     .number({ error: "Quantity must be a number" })
     .int("Quantity must be a whole integer")
