@@ -1,7 +1,7 @@
-import { PrismaClient, Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage } from '@prisma/client';
-import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from '../interfaces/product.interface';
-import { AppError } from '../utils/appError';
-import { ImageService } from './image.service';
+import { PrismaClient, Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage, ProductType } from '@prisma/client';
+import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from '../interfaces/product.interface.js';
+import { AppError } from '../utils/appError.js';
+import { ImageService } from './image.service.js';
 
 const prisma = new PrismaClient();
 
@@ -10,15 +10,22 @@ type PrismaProductWithImages = PrismaProduct & { images: PrismaProductImage[] };
 export class ProductsServices {
   private imageService = new ImageService();
 
-  private getStockStatus(qty: number, minimumStockLevel: number): StockStatus {
-    if (qty > 100) return 'overstock';
+  private getStockStatus(qty: number, minimumStockLevel: number, maximumStockLevel: number): StockStatus {
+    if (qty === 0) return 'out_of_stock';
     if (qty <= minimumStockLevel) return 'low';
-    return 'medium';
+    if (qty > maximumStockLevel) return 'overstock';
+    return 'normal';
   }
 
   private format(p: PrismaProductWithImages): Product {
     const primaryImageUrl = p.images?.find((img) => img.isPrimary)?.url || p.images?.[0]?.url;
-    return { ...p, price: Number(p.price), stockStatus: this.getStockStatus(p.stockQuantity, p.minimumStockLevel),imageUrl: primaryImageUrl, };
+    return {
+      ...p,
+      price: Number(p.price),
+      productType: p.productType as Product['productType'],
+      stockStatus: this.getStockStatus(p.stockQuantity, p.minimumStockLevel, p.maximumStockLevel),
+      imageUrl: primaryImageUrl,
+    };
   }
 
   private async resolveImageUrl(image?: Express.Multer.File, imageUrl?: string): Promise<string | undefined> {
@@ -44,6 +51,9 @@ export class ProductsServices {
         price: data.price,
         stockQuantity: data.stockQuantity ?? 0,
         minimumStockLevel: data.minimumStockLevel ?? 5,
+        maximumStockLevel: data.maximumStockLevel ?? 100,
+        isAvailable: data.isAvailable ?? true,
+        productType: (data.productType ?? 'READY_TO_WEAR') as ProductType,
         sizes: data.sizes ?? [],
         colors: data.colors ?? [],
         categoryId: data.categoryId,
@@ -51,7 +61,7 @@ export class ProductsServices {
           images: { create: { url: resolvedUrl, isPrimary: true } },
         }),
       },
-      include: { images: true },
+      include: { images: true,  category: true, },
     });
 
     return this.format(product);
@@ -69,7 +79,7 @@ export class ProductsServices {
     if (filters.slug) where.slug = filters.slug;
 
     const [products, totalCount] = await Promise.all([
-      prisma.product.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' }, include: { images: true } }),
+      prisma.product.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' }, include: { images: true, category: true } }),
       prisma.product.count({ where }),
     ]);
 
@@ -123,6 +133,12 @@ export class ProductsServices {
 
     const resolvedUrl = await this.resolveImageUrl(image, data.imageUrl);
 
+    const minimumStockLevel = data.minimumStockLevel ?? product.minimumStockLevel;
+    const maximumStockLevel = data.maximumStockLevel ?? product.maximumStockLevel;
+    if (maximumStockLevel < minimumStockLevel) {
+      throw new AppError('Maximum stock threshold must be greater than or equal to the minimum threshold', 400);
+    }
+
     // If a new image is provided, delete all existing images first
     if (resolvedUrl && product.images.length > 0) {
       for (const img of product.images) {
@@ -143,6 +159,9 @@ export class ProductsServices {
         ...(data.price !== undefined && { price: data.price }),
         ...(data.stockQuantity !== undefined && { stockQuantity: data.stockQuantity }),
         ...(data.minimumStockLevel !== undefined && { minimumStockLevel: data.minimumStockLevel }),
+        ...(data.maximumStockLevel !== undefined && { maximumStockLevel: data.maximumStockLevel }),
+        ...(data.isAvailable !== undefined && { isAvailable: data.isAvailable }),
+        ...(data.productType && { productType: data.productType as ProductType }),
         ...(data.sizes && { sizes: data.sizes }),
         ...(data.colors && { colors: data.colors }),
         ...(data.categoryId && { categoryId: data.categoryId }),

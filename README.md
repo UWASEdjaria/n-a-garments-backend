@@ -18,7 +18,7 @@ Set the environment variables in the process environment or your deployment plat
 | `JWT_SECRET` | Yes | Secret used to sign and verify JWTs. |
 | `JWT_EXPIRES_IN` | No | Token lifetime; defaults to `7d`. |
 | `PORT` | No | HTTP port; defaults to `5000`. |
-| `FRONTEND_URL` | No | Allowed CORS origin and password-reset link origin; defaults to `http://localhost:3000`. |
+| `FRONTEND_URL` | No | Allowed CORS origin and password-reset link origin; defaults to `https://na-garments-frontend.vercel.app`. |
 | `PAYMENT_PENDING_TIMEOUT_MINUTES` | No | Time before an unanswered pending payment can be retried; defaults to `15` minutes. |
 | `CLOUDINARY_CLOUD_NAME` | For image uploads | Cloudinary cloud name. |
 | `CLOUDINARY_API_KEY` | For image uploads | Cloudinary API key. |
@@ -30,7 +30,7 @@ Set the environment variables in the process environment or your deployment plat
 | `EMAIL_SECURE` | For email | Set to `true` to enable secure SMTP. |
 | `EMAIL_USER` | For email | SMTP username. |
 | `EMAIL_PASS` | For email | SMTP password. |
-| `EMAIL_FROM` | No | Sender address; defaults to the `na-garments` name and `EMAIL_USER`. |
+| `EMAIL_FROM` | No | Sender address; defaults to the `nagarments` name and `EMAIL_USER`. |
 | `ADMIN_EMAIL` | For database seeding | Initial admin email; the seed script has a fallback if unset. |
 | `ADMIN_PASSWORD` | For database seeding | Initial admin password; set a strong value before seeding. |
 

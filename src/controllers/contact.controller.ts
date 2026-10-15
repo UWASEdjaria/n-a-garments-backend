@@ -5,10 +5,10 @@ import {
   ContactMessageSingleResponse,
   CreateContactMessageRequest,
   UpdateContactMessageReadRequest,
-} from '../interfaces/contact.interface';
-import { StandardErrorResponse } from '../interfaces/auth.interface';
-import { ContactService } from '../services/contact.service';
-import { createContactMessageSchema, updateContactMessageReadSchema } from '../validators/contact.validator';
+} from '../interfaces/contact.interface.js';
+import { StandardErrorResponse } from '../interfaces/auth.interface.js';
+import { ContactService } from '../services/contact.service.js';
+import { createContactMessageSchema, updateContactMessageReadSchema } from '../validators/contact.validator.js';
 
 @Route('contact')
 @Tags('Contact')

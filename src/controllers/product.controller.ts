@@ -1,9 +1,9 @@
 import { Controller, Delete, FormField, Get, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags, UploadedFile } from 'tsoa';
-import { CreateProductDTO, UpdateProductDTO, Product } from '../interfaces/product.interface';
-import { StandardErrorResponse } from '../interfaces/auth.interface';
-import { ProductsServices } from '../services/product.service';
-import { createProductSchema, ALLOWED_SIZES, ALLOWED_COLORS } from '../validators/product.validator';
-import { AppError } from '../utils/appError';
+import { CreateProductDTO, UpdateProductDTO, Product } from '../interfaces/product.interface.js';
+import { StandardErrorResponse } from '../interfaces/auth.interface.js';
+import { ProductsServices } from '../services/product.service.js';
+import { createProductSchema, updateProductSchema, ALLOWED_SIZES, ALLOWED_COLORS, ALLOWED_PRODUCT_TYPES } from '../validators/product.validator.js';
+import { AppError } from '../utils/appError.js';
 
 const parseArray = (value?: string): string[] => {
   if (!value) return [];
@@ -13,15 +13,23 @@ const cleanOptionalString = (value?: string): string | undefined => {
   if (!value || value === 'string' || value === 'undefined') {
     return undefined;
   }
-
   return value;
 };
 const parseOptionalNumber = (value?: string): number | undefined => {
   if (value === undefined || value.trim() === '') return undefined;
-
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) throw new AppError('Numeric fields must be valid numbers', 400);
   return parsed;
+};
+const parseOptionalBoolean = (value?: string): boolean | undefined => {
+  if (value === undefined || value === '') return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new AppError('Availability must be true or false', 400);
+};
+const parseProductType = (value?: string): 'READY_TO_WEAR' | 'MADE_TO_ORDER' | undefined => {
+  if (!value || !ALLOWED_PRODUCT_TYPES.includes(value as 'READY_TO_WEAR' | 'MADE_TO_ORDER')) return undefined;
+  return value as 'READY_TO_WEAR' | 'MADE_TO_ORDER';
 };
 
 @Route('products')
@@ -42,11 +50,11 @@ export class ProductController extends Controller {
     return this.productService.getAllProducts({ search, categoryId, slug, page, limit });
   }
 
-  /** Returns all valid sizes and colors for products */
+  /** Returns all valid sizes, colors, and product types */
   @Get('/options')
   @SuccessResponse('200', 'Success')
-  public async getProductOptions(): Promise<{ sizes: string[]; colors: string[] }> {
-    return { sizes: [...ALLOWED_SIZES], colors: [...ALLOWED_COLORS] };
+  public async getProductOptions(): Promise<{ sizes: string[]; colors: string[]; productTypes: string[] }> {
+    return { sizes: [...ALLOWED_SIZES], colors: [...ALLOWED_COLORS], productTypes: [...ALLOWED_PRODUCT_TYPES] };
   }
 
   /** Get a single product by ID */
@@ -79,6 +87,9 @@ export class ProductController extends Controller {
     @FormField() categoryId: string,
     @FormField() stockQuantity?: number,
     @FormField() minimumStockLevel?: number,
+    @FormField() maximumStockLevel?: number,
+    @FormField() isAvailable?: string,
+    @FormField() productType?: string,
     @FormField() sizes?: string,
     @FormField() colors?: string,
     @FormField() imageUrl?: string,
@@ -90,8 +101,11 @@ export class ProductController extends Controller {
       description,
       price: Number(price),
       categoryId,
-      stockQuantity: stockQuantity ? Number(stockQuantity) : 0,
-      minimumStockLevel: minimumStockLevel ? Number(minimumStockLevel) : 5,
+      stockQuantity: stockQuantity !== undefined ? Number(stockQuantity) : 0,
+      minimumStockLevel: minimumStockLevel !== undefined ? Number(minimumStockLevel) : 5,
+      maximumStockLevel: maximumStockLevel !== undefined ? Number(maximumStockLevel) : 100,
+      isAvailable: parseOptionalBoolean(isAvailable) ?? true,
+      productType: parseProductType(productType) ?? 'READY_TO_WEAR',
       sizes: parseArray(sizes),
       colors: parseArray(colors),
       imageUrl: imageUrl === 'undefined' ? undefined : imageUrl,
@@ -116,6 +130,9 @@ export class ProductController extends Controller {
     @FormField() categoryId?: string,
     @FormField() stockQuantity?: string,
     @FormField() minimumStockLevel?: string,
+    @FormField() maximumStockLevel?: string,
+    @FormField() isAvailable?: string,
+    @FormField() productType?: string,
     @FormField() sizes?: string,
     @FormField() colors?: string,
     @FormField() imageUrl?: string,
@@ -124,22 +141,25 @@ export class ProductController extends Controller {
     const parsedPrice = parseOptionalNumber(price);
     const parsedStockQuantity = parseOptionalNumber(stockQuantity);
     const parsedMinimumStockLevel = parseOptionalNumber(minimumStockLevel);
+    const parsedMaximumStockLevel = parseOptionalNumber(maximumStockLevel);
+    const parsedIsAvailable = parseOptionalBoolean(isAvailable);
+    const parsedProductType = parseProductType(productType);
     const dto: UpdateProductDTO = {
       ...(name && { name }),
       ...(slug && { slug }),
       ...(description && { description }),
-      ...(parsedPrice !== undefined && parsedPrice > 0 && { price: parsedPrice }),
-      ...(cleanOptionalString(categoryId) && {
-         categoryId: cleanOptionalString(categoryId),
-      }),
-      ...(parsedStockQuantity !== undefined && parsedStockQuantity >= 0 && { stockQuantity: parsedStockQuantity }),
-      ...(parsedMinimumStockLevel !== undefined && parsedMinimumStockLevel >= 0 && { minimumStockLevel: parsedMinimumStockLevel }),
+      ...(parsedPrice !== undefined && { price: parsedPrice }),
+      ...(cleanOptionalString(categoryId) && { categoryId: cleanOptionalString(categoryId) }),
+      ...(parsedStockQuantity !== undefined && { stockQuantity: parsedStockQuantity }),
+      ...(parsedMinimumStockLevel !== undefined && { minimumStockLevel: parsedMinimumStockLevel }),
+      ...(parsedMaximumStockLevel !== undefined && { maximumStockLevel: parsedMaximumStockLevel }),
+      ...(parsedIsAvailable !== undefined && { isAvailable: parsedIsAvailable }),
+      ...(parsedProductType && { productType: parsedProductType }),
       ...(sizes && { sizes: parseArray(sizes) }),
       ...(colors && { colors: parseArray(colors) }),
-      ...(cleanOptionalString(imageUrl) && {
-         imageUrl: cleanOptionalString(imageUrl),
-      }),
+      ...(cleanOptionalString(imageUrl) && { imageUrl: cleanOptionalString(imageUrl) }),
     };
+    updateProductSchema.parse(dto);
     return this.productService.updateProduct(id, image, dto);
   }
 

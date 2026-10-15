@@ -1,8 +1,8 @@
 import { Controller, Route, Get, Post, Delete, Path, Tags, Security, Request, SuccessResponse, Response } from 'tsoa';
 import express from 'express';
-import { WishlistService } from '../services/wishlist.service';
-import { WishlistResponse } from '../interfaces/wishlist.interface';
-import { getUser } from '../utils/getUser';
+import { WishlistService } from '../services/wishlist.service.js';
+import { WishlistResponse } from '../interfaces/wishlist.interface.js';
+import { getUser } from '../utils/getUser.js';
 
 const wishlistService = new WishlistService();
 

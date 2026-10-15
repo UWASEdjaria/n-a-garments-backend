@@ -1,5 +1,5 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { JwtPayload } from '../interfaces/auth.interface';
+import { JwtPayload } from '../interfaces/auth.interface.js';
 
 export type { JwtPayload };
 

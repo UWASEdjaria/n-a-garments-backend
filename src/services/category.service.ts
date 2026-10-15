@@ -4,8 +4,8 @@ import {
   UpdateCategoryRequest, 
   CategorySingleResponse, 
   CategoryListResponse 
-} from '../interfaces/category.interface';
-import { AppError } from '../utils/appError';
+} from '../interfaces/category.interface.js';
+import { AppError } from '../utils/appError.js';
 
 const prisma = new PrismaClient();
 
@@ -145,13 +145,27 @@ export class CategoryService {
 
   // Delete category by ID
   async deleteCategory(id: string): Promise<{ success: boolean; message: string }> {
-    const existing = await prisma.category.findUnique({ where: { id } });
+    const existing = await prisma.category.findUnique({
+      where: { id },
+      select: { id: true, _count: { select: { products: true } } },
+    });
 
     if (!existing) {
       throw new AppError('Category not found.', 404);
     }
 
-    await prisma.category.delete({ where: { id } });
+    if (existing._count.products > 0) {
+      throw new AppError('This category cannot be deleted while products are assigned to it.', 409);
+    }
+
+    try {
+      await prisma.category.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new AppError('This category cannot be deleted while products are assigned to it.', 409);
+      }
+      throw error;
+    }
 
     return {
       success: true,

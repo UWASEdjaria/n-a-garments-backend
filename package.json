@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
+ "scripts": {
     "tsoa:gen": "tsoa spec-and-routes",
     "dev": "nodemon --watch src -e ts --exec \"pnpm tsoa:gen && tsx src/server.ts\"",
     "build": "pnpm tsoa:gen && tsc",

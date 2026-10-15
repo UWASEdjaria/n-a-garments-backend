@@ -55,9 +55,83 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"StockStatus": {
+				"type": "string",
+				"enum": [
+					"out_of_stock",
+					"low",
+					"normal",
+					"overstock"
+				]
+			},
+			"StockProductSummary": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"stockQuantity": {
+						"type": "number",
+						"format": "double"
+					},
+					"minimumStockLevel": {
+						"type": "number",
+						"format": "double"
+					},
+					"maximumStockLevel": {
+						"type": "number",
+						"format": "double"
+					},
+					"stockStatus": {
+						"$ref": "#/components/schemas/StockStatus"
+					},
+					"images": {
+						"items": {
+							"properties": {
+								"productId": {
+									"type": "string"
+								},
+								"isPrimary": {
+									"type": "boolean"
+								},
+								"url": {
+									"type": "string"
+								},
+								"id": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"productId",
+								"isPrimary",
+								"url",
+								"id"
+							],
+							"type": "object"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"stockQuantity",
+					"minimumStockLevel",
+					"maximumStockLevel",
+					"stockStatus",
+					"images"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"StockEntry": {
 				"properties": {
 					"id": {
+						"type": "string"
+					},
+					"batchCode": {
 						"type": "string"
 					},
 					"productId": {
@@ -82,15 +156,48 @@
 					"updatedAt": {
 						"type": "string",
 						"format": "date-time"
+					},
+					"product": {
+						"$ref": "#/components/schemas/StockProductSummary"
 					}
 				},
 				"required": [
 					"id",
+					"batchCode",
 					"productId",
 					"quantity",
 					"unitCost",
 					"createdAt",
-					"updatedAt"
+					"updatedAt",
+					"product"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StockSummary": {
+				"properties": {
+					"totalProducts": {
+						"type": "number",
+						"format": "double"
+					},
+					"lowStock": {
+						"type": "number",
+						"format": "double"
+					},
+					"outOfStock": {
+						"type": "number",
+						"format": "double"
+					},
+					"overstock": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"totalProducts",
+					"lowStock",
+					"outOfStock",
+					"overstock"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -98,6 +205,9 @@
 			"AddStockDTO": {
 				"properties": {
 					"productId": {
+						"type": "string"
+					},
+					"batchCode": {
 						"type": "string"
 					},
 					"quantity": {
@@ -122,6 +232,9 @@
 			},
 			"EditStockDTO": {
 				"properties": {
+					"batchCode": {
+						"type": "string"
+					},
 					"quantity": {
 						"type": "number",
 						"format": "double"
@@ -137,12 +250,27 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"StockStatus": {
+			"DeleteStockResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"success",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ProductType": {
 				"type": "string",
 				"enum": [
-					"low",
-					"medium",
-					"overstock"
+					"READY_TO_WEAR",
+					"MADE_TO_ORDER"
 				]
 			},
 			"ProductImage": {
@@ -195,8 +323,15 @@
 						"type": "number",
 						"format": "double"
 					},
+					"maximumStockLevel": {
+						"type": "number",
+						"format": "double"
+					},
 					"isAvailable": {
 						"type": "boolean"
+					},
+					"productType": {
+						"$ref": "#/components/schemas/ProductType"
 					},
 					"stockStatus": {
 						"$ref": "#/components/schemas/StockStatus"
@@ -242,7 +377,9 @@
 					"price",
 					"stockQuantity",
 					"minimumStockLevel",
+					"maximumStockLevel",
 					"isAvailable",
+					"productType",
 					"stockStatus",
 					"sizes",
 					"colors",
@@ -655,6 +792,147 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"AdminNotificationType": {
+				"type": "string",
+				"enum": [
+					"NEW_USER",
+					"ORDER_RECEIVED",
+					"CUSTOM_ORDER_RECEIVED",
+					"CONTACT_MESSAGE_RECEIVED",
+					"CART_ACTIVITY",
+					"SYSTEM"
+				]
+			},
+			"AdminNotificationData": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"type": {
+						"$ref": "#/components/schemas/AdminNotificationType"
+					},
+					"title": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"resourceType": {
+						"type": "string",
+						"nullable": true
+					},
+					"resourceId": {
+						"type": "string",
+						"nullable": true
+					},
+					"actorName": {
+						"type": "string",
+						"nullable": true
+					},
+					"actorEmail": {
+						"type": "string",
+						"nullable": true
+					},
+					"isRead": {
+						"type": "boolean"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"type",
+					"title",
+					"message",
+					"resourceType",
+					"resourceId",
+					"actorName",
+					"actorEmail",
+					"isRead",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminNotificationListResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/AdminNotificationData"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminNotificationCountResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"count": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"count"
+						],
+						"type": "object"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminNotificationSingleResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"$ref": "#/components/schemas/AdminNotificationData"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"GuestPlaceOrderRequest": {
 				"properties": {
 					"name": {
@@ -700,6 +978,248 @@
 					"email",
 					"shippingAddr",
 					"items"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"QuoteStatus": {
+				"type": "string",
+				"enum": [
+					"PENDING",
+					"PROPOSED",
+					"ACCEPTED",
+					"DECLINED"
+				]
+			},
+			"ProductionStatus": {
+				"type": "string",
+				"enum": [
+					"NOT_STARTED",
+					"IN_PROGRESS",
+					"COMPLETED"
+				]
+			},
+			"CustomOrderData": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string",
+						"nullable": true
+					},
+					"productId": {
+						"type": "string",
+						"nullable": true
+					},
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string"
+					},
+					"garmentType": {
+						"type": "string"
+					},
+					"quantity": {
+						"type": "number",
+						"format": "double"
+					},
+					"measurements": {
+						"type": "string",
+						"nullable": true
+					},
+					"description": {
+						"type": "string"
+					},
+					"additionalReqs": {
+						"type": "string",
+						"nullable": true
+					},
+					"referenceImageUrls": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"status": {
+						"$ref": "#/components/schemas/OrderStatus"
+					},
+					"paymentStatus": {
+						"$ref": "#/components/schemas/PaymentStatus"
+					},
+					"adminNotes": {
+						"type": "string",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"quoteStatus": {
+						"$ref": "#/components/schemas/QuoteStatus"
+					},
+					"quoteTotal": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"advanceAmount": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"advancePaidAmount": {
+						"type": "number",
+						"format": "double"
+					},
+					"balanceAmount": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"quoteProposedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"acceptedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"declinedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"productionStatus": {
+						"$ref": "#/components/schemas/ProductionStatus"
+					},
+					"completedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"productId",
+					"name",
+					"email",
+					"phone",
+					"garmentType",
+					"quantity",
+					"measurements",
+					"description",
+					"additionalReqs",
+					"referenceImageUrls",
+					"status",
+					"paymentStatus",
+					"adminNotes",
+					"createdAt",
+					"updatedAt",
+					"quoteStatus",
+					"quoteTotal",
+					"advanceAmount",
+					"advancePaidAmount",
+					"balanceAmount",
+					"quoteProposedAt",
+					"acceptedAt",
+					"declinedAt",
+					"productionStatus",
+					"completedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CustomOrderResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"$ref": "#/components/schemas/CustomOrderData"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateCustomOrderRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string"
+					},
+					"garmentType": {
+						"type": "string"
+					},
+					"quantity": {
+						"type": "number",
+						"format": "double"
+					},
+					"measurements": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"additionalReqs": {
+						"type": "string"
+					},
+					"referenceImageUrls": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"productId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name",
+					"email",
+					"phone",
+					"garmentType",
+					"quantity",
+					"description"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateCustomOrderStatusRequest": {
+				"properties": {
+					"status": {
+						"$ref": "#/components/schemas/OrderStatus"
+					},
+					"adminNotes": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"status"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -1038,6 +1558,115 @@
 					"color": {
 						"type": "string",
 						"nullable": true
+					},
+					"product": {
+						"properties": {
+							"updatedAt": {
+								"type": "string",
+								"format": "date-time"
+							},
+							"createdAt": {
+								"type": "string",
+								"format": "date-time"
+							},
+							"categoryId": {
+								"type": "string"
+							},
+							"imageUrl": {
+								"type": "string"
+							},
+							"images": {
+								"items": {
+									"properties": {
+										"productId": {
+											"type": "string"
+										},
+										"isPrimary": {
+											"type": "boolean"
+										},
+										"url": {
+											"type": "string"
+										},
+										"id": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"productId",
+										"isPrimary",
+										"url",
+										"id"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"colors": {
+								"items": {
+									"type": "string"
+								},
+								"type": "array"
+							},
+							"sizes": {
+								"items": {
+									"type": "string"
+								},
+								"type": "array"
+							},
+							"productType": {
+								"type": "string"
+							},
+							"isAvailable": {
+								"type": "boolean"
+							},
+							"maximumStockLevel": {
+								"type": "number",
+								"format": "double"
+							},
+							"minimumStockLevel": {
+								"type": "number",
+								"format": "double"
+							},
+							"stockQuantity": {
+								"type": "number",
+								"format": "double"
+							},
+							"price": {
+								"type": "number",
+								"format": "double"
+							},
+							"description": {
+								"type": "string"
+							},
+							"slug": {
+								"type": "string"
+							},
+							"name": {
+								"type": "string"
+							},
+							"id": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"updatedAt",
+							"createdAt",
+							"categoryId",
+							"images",
+							"colors",
+							"sizes",
+							"productType",
+							"isAvailable",
+							"maximumStockLevel",
+							"minimumStockLevel",
+							"stockQuantity",
+							"price",
+							"description",
+							"slug",
+							"name",
+							"id"
+						],
+						"type": "object"
 					}
 				},
 				"required": [
@@ -1140,6 +1769,49 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"MessageResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"success",
+					"message"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"RegisterRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"password": {
+						"type": "string"
+					},
+					"confirmPassword": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name",
+					"email",
+					"password",
+					"confirmPassword"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"UserRole": {
 				"type": "string",
 				"enum": [
@@ -1212,33 +1884,6 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"RegisterRequest": {
-				"properties": {
-					"name": {
-						"type": "string"
-					},
-					"email": {
-						"type": "string"
-					},
-					"password": {
-						"type": "string"
-					},
-					"confirmPassword": {
-						"type": "string"
-					},
-					"phone": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"name",
-					"email",
-					"password",
-					"confirmPassword"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
 			"LoginRequest": {
 				"properties": {
 					"email": {
@@ -1251,22 +1896,6 @@
 				"required": [
 					"email",
 					"password"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"MessageResponse": {
-				"properties": {
-					"success": {
-						"type": "boolean"
-					},
-					"message": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"success",
-					"message"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -1313,9 +1942,9 @@
 		}
 	},
 	"info": {
-		"title": "na-garments REST API",
+		"title": "nagarments REST API",
 		"version": "1.0.0",
-		"description": "Backend API documentation for na-garments tailoring, e-commerce, and custom order platform.",
+		"description": "Backend API documentation for nagarments tailoring, e-commerce, and custom order platform.",
 		"license": {
 			"name": "ISC"
 		},
@@ -1441,6 +2070,13 @@
 							"application/json": {
 								"schema": {
 									"properties": {
+										"summary": {
+											"$ref": "#/components/schemas/StockSummary"
+										},
+										"totalCount": {
+											"type": "number",
+											"format": "double"
+										},
 										"totalPages": {
 											"type": "number",
 											"format": "double"
@@ -1453,6 +2089,8 @@
 										}
 									},
 									"required": [
+										"summary",
+										"totalCount",
 										"totalPages",
 										"data"
 									],
@@ -1491,6 +2129,22 @@
 							"default": 10,
 							"format": "double",
 							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "search",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/StockStatus"
 						}
 					}
 				]
@@ -1577,6 +2231,41 @@
 						}
 					}
 				}
+			},
+			"delete": {
+				"operationId": "DeleteStockEntry",
+				"responses": {
+					"200": {
+						"description": "Deleted",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DeleteStockResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Stock"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/products": {
@@ -1737,6 +2426,16 @@
 										"type": "number",
 										"format": "double"
 									},
+									"maximumStockLevel": {
+										"type": "number",
+										"format": "double"
+									},
+									"isAvailable": {
+										"type": "string"
+									},
+									"productType": {
+										"type": "string"
+									},
 									"sizes": {
 										"type": "string"
 									},
@@ -1774,6 +2473,12 @@
 							"application/json": {
 								"schema": {
 									"properties": {
+										"productTypes": {
+											"items": {
+												"type": "string"
+											},
+											"type": "array"
+										},
 										"colors": {
 											"items": {
 												"type": "string"
@@ -1788,6 +2493,7 @@
 										}
 									},
 									"required": [
+										"productTypes",
 										"colors",
 										"sizes"
 									],
@@ -1797,7 +2503,7 @@
 						}
 					}
 				},
-				"description": "Returns all valid sizes and colors for products",
+				"description": "Returns all valid sizes, colors, and product types",
 				"tags": [
 					"Products"
 				],
@@ -1917,6 +2623,15 @@
 										"type": "string"
 									},
 									"minimumStockLevel": {
+										"type": "string"
+									},
+									"maximumStockLevel": {
+										"type": "string"
+									},
+									"isAvailable": {
+										"type": "string"
+									},
+									"productType": {
 										"type": "string"
 									},
 									"sizes": {
@@ -2573,6 +3288,177 @@
 				}
 			}
 		},
+		"/admin/notifications": {
+			"get": {
+				"operationId": "GetAllNotifications",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AdminNotificationListResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Admin Notifications"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/admin/notifications/unread-count": {
+			"get": {
+				"operationId": "GetUnreadCount",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AdminNotificationCountResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Admin Notifications"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/admin/notifications/{id}/read": {
+			"patch": {
+				"operationId": "MarkAsRead",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AdminNotificationSingleResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Admin notification not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Admin Notifications"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/admin/notifications/mark-all-read": {
+			"patch": {
+				"operationId": "MarkAllAsRead",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AdminNotificationCountResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Admin Notifications"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": []
+			}
+		},
 		"/orders/guest": {
 			"post": {
 				"operationId": "PlaceGuestOrder",
@@ -2605,6 +3491,195 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/GuestPlaceOrderRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/custom-orders": {
+			"post": {
+				"operationId": "CreateCustomOrder",
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CustomOrderResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad Request"
+					}
+				},
+				"description": "Submit a bespoke / custom order request",
+				"tags": [
+					"Custom Orders"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateCustomOrderRequest"
+							}
+						}
+					}
+				}
+			},
+			"get": {
+				"operationId": "GetAllCustomOrders",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/CustomOrderData"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get all custom order requests — Admin only",
+				"tags": [
+					"Custom Orders"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/custom-orders/my": {
+			"get": {
+				"operationId": "GetMyCustomOrders",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/CustomOrderData"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get current customer's custom order requests",
+				"tags": [
+					"Custom Orders"
+				],
+				"security": [
+					{
+						"jwt": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/custom-orders/{id}": {
+			"get": {
+				"operationId": "GetCustomOrderById",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CustomOrderData"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden"
+					},
+					"404": {
+						"description": "Not Found"
+					}
+				},
+				"description": "Get one custom order request — own request or Admin",
+				"tags": [
+					"Custom Orders"
+				],
+				"security": [
+					{
+						"jwt": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/custom-orders/{id}/status": {
+			"patch": {
+				"operationId": "UpdateCustomOrderStatus",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CustomOrderData"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not Found"
+					}
+				},
+				"description": "Update custom order status — Admin only",
+				"tags": [
+					"Custom Orders"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateCustomOrderStatusRequest"
 							}
 						}
 					}
@@ -3125,6 +4200,16 @@
 								}
 							}
 						}
+					},
+					"409": {
+						"description": "Category has assigned products",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
 					}
 				},
 				"description": "Delete a category — Admin only",
@@ -3358,11 +4443,11 @@
 				"operationId": "Register",
 				"responses": {
 					"201": {
-						"description": "Created",
+						"description": "Registration successful. Verification email sent",
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/AuthResponse"
+									"$ref": "#/components/schemas/MessageResponse"
 								}
 							}
 						}
@@ -3592,6 +4677,48 @@
 						}
 					}
 				}
+			}
+		},
+		"/auth/verify-email": {
+			"get": {
+				"operationId": "VerifyEmail",
+				"responses": {
+					"200": {
+						"description": "Email verified successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MessageResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid or expired verification link",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Verifies a customer's email address",
+				"tags": [
+					"Authentication"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "token",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		}
 	},

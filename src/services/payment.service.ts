@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { PrismaClient, type Payment, type Prisma } from '@prisma/client';
-import { InitiateGuestPaymentDTO, InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse, PaymentAttemptSummary } from '../interfaces/payment.interface';
-import { AppError } from '../utils/appError';
-import { PaypackRequestError, PaypackService } from './paypack.service';
+import { InitiateGuestPaymentDTO, InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse, PaymentAttemptSummary } from '../interfaces/payment.interface.js';
+import { AppError } from '../utils/appError.js';
+import { PaypackRequestError, PaypackService } from './paypack.service.js';
 
 const prisma = new PrismaClient();
 const configuredPendingMinutes = Number.parseInt(process.env.PAYMENT_PENDING_TIMEOUT_MINUTES || '15', 10);
@@ -125,18 +125,24 @@ export class PaymentService {
         });
       } catch (error) {
         if (error instanceof PaypackRequestError && error.definitivelyRejected) {
-          await prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
-            await transaction.payment.update({ where: { id: payment.id }, data: { status: 'FAILED' } });
-            await transaction.order.updateMany({
-              where: {
-                id: payment.orderId,
-                paymentStatus: { not: 'PAID' },
-                payments: { none: { status: 'PENDING' } },
-              },
-              data: { paymentStatus: 'FAILED' },
-            });
-          });
-        }
+  await prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
+    await transaction.payment.update({
+      where: { id: payment.id },
+      data: { status: 'FAILED' },
+    });
+
+    if (payment.orderId) {
+      await transaction.order.updateMany({
+        where: {
+          id: payment.orderId,
+          paymentStatus: { not: 'PAID' },
+          payments: { none: { status: 'PENDING' } },
+        },
+        data: { paymentStatus: 'FAILED' },
+       });
+      }
+     });
+    }
         throw error;
       }
     } else if (data.paymentMethod === 'CASH_ON_DELIVERY' || data.paymentMethod === 'CARD') {
@@ -156,75 +162,118 @@ export class PaymentService {
   }
 
   public async handlePaypackWebhook(payload: { ref: string; status: string }): Promise<void> {
-    const webhookStatus = payload.status.toLowerCase();
-    const isSuccess = ['successful', 'completed', 'paid'].includes(webhookStatus);
-    const failureStatus = webhookStatus === 'cancelled'
-      ? 'CANCELLED'
-      : ['failed', 'failure'].includes(webhookStatus)
-        ? 'FAILED'
-        : null;
+  const webhookStatus = payload.status.toLowerCase();
+  const isSuccess = ['successful', 'completed', 'paid'].includes(webhookStatus);
+  const failureStatus = webhookStatus === 'cancelled'
+    ? 'CANCELLED'
+    : ['failed', 'failure'].includes(webhookStatus)
+      ? 'FAILED'
+      : null;
 
-    if (!isSuccess && !failureStatus) {
+  if (!isSuccess && !failureStatus) {
+    return;
+  }
+
+  await prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
+    const payment = await transaction.payment.findUnique({
+      where: { ref: payload.ref },
+    });
+
+    if (!payment) {
+      console.warn(`Paypack webhook received for unknown reference: ${payload.ref}`);
       return;
     }
 
-    await prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
-      const payment = await transaction.payment.findUnique({ where: { ref: payload.ref } });
-      if (!payment) {
-        console.warn(`Paypack webhook received for unknown reference: ${payload.ref}`);
-        return;
-      }
-      if (payment.status === 'PAID' || payment.status === 'SUCCESSFUL') {
-        return;
-      }
+    if (payment.status === 'PAID' || payment.status === 'SUCCESSFUL') {
+      return;
+    }
 
-      if (isSuccess) {
-        const orderUpdate = await transaction.order.updateMany({
-          where: { id: payment.orderId, paymentStatus: { not: 'PAID' } },
-          data: { paymentStatus: 'PAID' },
-        });
-        await transaction.payment.updateMany({
-          where: { id: payment.id, status: { notIn: ['PAID', 'SUCCESSFUL'] } },
-          data: { status: orderUpdate.count === 1 ? 'PAID' : 'SUCCESSFUL' },
-        });
+    if (!payment.orderId) {
+      console.error(
+        `Paypack webhook received for payment ${payment.id} without a regular order ID. Custom-order payment handling is not implemented.`
+      );
+      return;
+    }
 
-        if (orderUpdate.count === 1) {
-          await transaction.payment.updateMany({
-            where: { orderId: payment.orderId, id: { not: payment.id }, status: 'PENDING' },
-            data: { status: 'CANCELLED' },
-          });
-        }
-
-        if (orderUpdate.count === 0) {
-          console.error(`Paypack reported a second successful attempt for already-paid order ${payment.orderId}; reference ${payload.ref} requires reconciliation.`);
-        }
-        return;
-      }
-
-      if (!failureStatus) {
-        return;
-      }
-
-      await transaction.payment.updateMany({
-        where: { id: payment.id, status: { notIn: ['PAID', 'SUCCESSFUL'] } },
-        data: { status: failureStatus },
-      });
-      await transaction.order.updateMany({
+    if (isSuccess) {
+      const orderUpdate = await transaction.order.updateMany({
         where: {
           id: payment.orderId,
           paymentStatus: { not: 'PAID' },
-          payments: { none: { status: 'PENDING' } },
         },
-        data: { paymentStatus: failureStatus },
+        data: { paymentStatus: 'PAID' },
       });
-    });
-  }
 
-  public async updatePaymentStatus(paymentId: string, dto: UpdatePaymentStatusDTO): Promise<PaymentResponse> {
+      await transaction.payment.updateMany({
+        where: {
+          id: payment.id,
+          status: { notIn: ['PAID', 'SUCCESSFUL'] },
+        },
+        data: {
+          status: orderUpdate.count === 1 ? 'PAID' : 'SUCCESSFUL',
+        },
+      });
+
+      if (orderUpdate.count === 1) {
+        await transaction.payment.updateMany({
+          where: {
+            orderId: payment.orderId,
+            id: { not: payment.id },
+            status: 'PENDING',
+          },
+          data: { status: 'CANCELLED' },
+        });
+      }
+
+      if (orderUpdate.count === 0) {
+        console.error(
+          `Paypack reported a second successful attempt for already-paid order ${payment.orderId}; reference ${payload.ref} requires reconciliation.`
+        );
+      }
+
+      return;
+    }
+
+    if (!failureStatus) {
+      return;
+    }
+
+    await transaction.payment.updateMany({
+      where: {
+        id: payment.id,
+        status: { notIn: ['PAID', 'SUCCESSFUL'] },
+      },
+      data: { status: failureStatus },
+    });
+
+    await transaction.order.updateMany({
+      where: {
+        id: payment.orderId,
+        paymentStatus: { not: 'PAID' },
+        payments: { none: { status: 'PENDING' } },
+      },
+      data: { paymentStatus: failureStatus },
+    });
+  });
+}
+    public async updatePaymentStatus(
+    paymentId: string,
+    dto: UpdatePaymentStatusDTO
+  ): Promise<PaymentResponse> {
     return prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
-      const payment = await transaction.payment.findUnique({ where: { id: paymentId } });
+      const payment = await transaction.payment.findUnique({
+        where: { id: paymentId },
+      });
+
       if (!payment) {
         throw new AppError('Payment record not found.', 404);
+      }
+
+      if (!payment.orderId) {
+        throw new AppError(
+          'This payment is not linked to a regular order. Custom-order payment handling is not implemented.',
+          400
+        );
       }
 
       if (dto.status === 'PAID' || dto.status === 'SUCCESSFUL') {
@@ -235,8 +284,12 @@ export class PaymentService {
             status: { in: ['PAID', 'SUCCESSFUL'] },
           },
         });
+
         if (otherSuccessfulAttempt) {
-          throw new AppError('Another payment attempt has already succeeded for this order.', 409);
+          throw new AppError(
+            'Another payment attempt has already succeeded for this order.',
+            409
+          );
         }
       }
 
@@ -246,14 +299,25 @@ export class PaymentService {
       });
 
       if (dto.status === 'PAID' || dto.status === 'SUCCESSFUL') {
-        await transaction.order.update({ where: { id: payment.orderId }, data: { paymentStatus: 'PAID' } });
+        await transaction.order.update({
+          where: { id: payment.orderId },
+          data: { paymentStatus: 'PAID' },
+        });
+
         await transaction.payment.updateMany({
-          where: { orderId: payment.orderId, id: { not: payment.id }, status: 'PENDING' },
+          where: {
+            orderId: payment.orderId,
+            id: { not: payment.id },
+            status: 'PENDING',
+          },
           data: { status: 'CANCELLED' },
         });
       } else if (dto.status === 'PENDING') {
         await transaction.order.updateMany({
-          where: { id: payment.orderId, paymentStatus: { not: 'PAID' } },
+          where: {
+            id: payment.orderId,
+            paymentStatus: { not: 'PAID' },
+          },
           data: { paymentStatus: 'PENDING' },
         });
       } else {
@@ -267,7 +331,11 @@ export class PaymentService {
         });
       }
 
-      return this.toResponse(updated, `Payment status updated to ${dto.status}`, isRetryEligible(updated));
+      return this.toResponse(
+        updated,
+        `Payment status updated to ${dto.status}`,
+        isRetryEligible(updated)
+      );
     });
   }
 
@@ -276,6 +344,7 @@ export class PaymentService {
       where: { id: orderId },
       select: { id: true, paymentStatus: true },
     });
+
     if (!order) {
       throw new AppError('Payment not found for this order.', 404);
     }
@@ -284,12 +353,17 @@ export class PaymentService {
       where: { orderId },
       orderBy: { createdAt: 'desc' },
     });
+
     const payment = payments[0];
+
     if (!payment) {
       throw new AppError('Payment not found for this order.', 404);
     }
 
-    const hasSuccessfulAttempt = payments.some((attempt) => ['PAID', 'SUCCESSFUL'].includes(attempt.status));
+    const hasSuccessfulAttempt = payments.some(
+      (attempt) => ['PAID', 'SUCCESSFUL'].includes(attempt.status)
+    );
+
     const attempts: PaymentAttemptSummary[] = payments.map((attempt) => ({
       paymentId: attempt.id,
       amount: Number(attempt.amount),
@@ -304,17 +378,23 @@ export class PaymentService {
       message: 'Payment attempts retrieved successfully.',
       data: this.paymentData(
         payment,
-        order.paymentStatus !== 'PAID' && !hasSuccessfulAttempt && isRetryEligible(payment),
+        order.paymentStatus !== 'PAID'
+          && !hasSuccessfulAttempt
+          && isRetryEligible(payment),
         attempts
       ),
     };
   }
 
-  public async getGuestPaymentByOrderId(orderId: string, email: string): Promise<PaymentResponse> {
+  public async getGuestPaymentByOrderId(
+    orderId: string,
+    email: string
+  ): Promise<PaymentResponse> {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       select: { userId: true, guestEmail: true },
     });
+
     if (
       !order
       || order.userId !== null
@@ -326,7 +406,11 @@ export class PaymentService {
     return this.getPaymentByOrderId(orderId);
   }
 
-  private toResponse(payment: Payment, message: string, retryAvailable: boolean): PaymentResponse {
+  private toResponse(
+    payment: Payment,
+    message: string,
+    retryAvailable: boolean
+  ): PaymentResponse {
     return {
       success: true,
       message,
@@ -339,6 +423,13 @@ export class PaymentService {
     retryAvailable: boolean,
     attempts?: PaymentAttemptSummary[]
   ): PaymentResponse['data'] {
+    if (!payment.orderId) {
+      throw new AppError(
+        'Cannot return a regular-order payment response for a custom-order payment.',
+        400
+      );
+    }
+
     return {
       paymentId: payment.id,
       orderId: payment.orderId,

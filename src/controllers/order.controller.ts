@@ -1,8 +1,8 @@
 import { Controller, Route, Get, Post, Patch, Body, Path, Query, Tags, Security, Request, SuccessResponse, Response } from 'tsoa';
 import express from 'express';
-import { OrderService } from '../services/order.service';
-import { PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface';
-import { getUser } from '../utils/getUser';
+import { OrderService } from '../services/order.service.js';
+import { PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface.js';
+import { getUser } from '../utils/getUser.js';
 
 const orderService = new OrderService();
 

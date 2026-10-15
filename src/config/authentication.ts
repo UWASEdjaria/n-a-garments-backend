@@ -1,7 +1,7 @@
 import * as express from 'express';
-import { verifyToken } from './jwt';
-import { JwtPayload } from '../interfaces/auth.interface';
-import { AppError } from '../utils/appError';
+import { verifyToken } from './jwt.js';
+import { JwtPayload } from '../interfaces/auth.interface.js';
+import { AppError } from '../utils/appError.js';
 
 export function expressAuthentication(
   request: express.Request,

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Path, Post, Put, Query, Response, Route, Security, SuccessResponse, Tags } from 'tsoa';
-import { PaymentService } from '../services/payment.service';
-import { initiateGuestPaymentSchema, initiatePaymentSchema, updatePaymentStatusSchema } from '../validators/payment.validator';
-import { InitiateGuestPaymentDTO, InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse } from '../interfaces/payment.interface';
+import { PaymentService } from '../services/payment.service.js';
+import { initiateGuestPaymentSchema, initiatePaymentSchema, updatePaymentStatusSchema } from '../validators/payment.validator.js';
+import { InitiateGuestPaymentDTO, InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse } from '../interfaces/payment.interface.js';
 
 @Route('payments')
 @Tags('Payments')

@@ -3,7 +3,7 @@ import {
   getExchangeRates,
   getSupportedCountries,
   type CountryCurrency,
-} from '../services/currency.service';
+} from '../services/currency.service.js';
 
 interface ExchangeRatesResponse {
   baseCurrency: string;

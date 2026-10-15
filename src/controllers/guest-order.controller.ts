@@ -1,8 +1,8 @@
 import { Body, Controller, Post, Request, Response, Route, SuccessResponse, Tags } from 'tsoa';
 import express from 'express';
-import { GuestPlaceOrderRequest, OrderResponse } from '../interfaces/order.interface';
-import { OrderService } from '../services/order.service';
-import { guestPlaceOrderSchema } from '../validators/guest-order.validator';
+import { GuestPlaceOrderRequest, OrderResponse } from '../interfaces/order.interface.js';
+import { OrderService } from '../services/order.service.js';
+import { guestPlaceOrderSchema } from '../validators/guest-order.validator.js';
 
 const orderService = new OrderService();
 

@@ -1,7 +1,7 @@
 import { Controller, Route, Post, Get, Put, Delete, Body, Path, Query, SuccessResponse, Response, Tags, Security } from 'tsoa';
-import { CategoryService } from '../services/category.service';
-import { CreateCategoryRequest, UpdateCategoryRequest, CategorySingleResponse, CategoryListResponse } from '../interfaces/category.interface';
-import { StandardErrorResponse } from '../interfaces/auth.interface';
+import { CategoryService } from '../services/category.service.js';
+import { CreateCategoryRequest, UpdateCategoryRequest, CategorySingleResponse, CategoryListResponse } from '../interfaces/category.interface.js';
+import { StandardErrorResponse } from '../interfaces/auth.interface.js';
 
 const categoryService = new CategoryService();
 
@@ -52,6 +52,7 @@ export class CategoryController extends Controller {
   @Security('jwt', ['ADMIN'])
   @SuccessResponse('200', 'Success')
   @Response<StandardErrorResponse>(404, 'Category not found')
+  @Response<StandardErrorResponse>(409, 'Category has assigned products')
   public async deleteCategory(@Path() id: string): Promise<{ success: boolean; message: string }> {
     return categoryService.deleteCategory(id);
   }

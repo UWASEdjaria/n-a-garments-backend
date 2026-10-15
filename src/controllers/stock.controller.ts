@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Path, Post, Put, Query, Route, Security, SuccessResponse, Tags } from "tsoa";
-import { AddStockDTO, EditStockDTO, StockEntry } from "../interfaces/stock.interface";
-import { StockService } from "../services/stock.service";
-import { addStockSchema, editStockSchema } from "../validators/stock.validator";
+import { Body, Controller, Delete, Get, Path, Post, Put, Query, Route, Security, SuccessResponse, Tags } from "tsoa";
+import { AddStockDTO, DeleteStockResponse, EditStockDTO, StockEntry, StockSummary } from "../interfaces/stock.interface.js";
+import { StockStatus } from "../interfaces/product.interface.js";
+import { StockService } from "../services/stock.service.js";
+import { addStockSchema, editStockSchema } from "../validators/stock.validator.js";
 
 @Route("stock")
 @Tags("Stock")
@@ -12,11 +13,15 @@ export class StockController extends Controller {
   @Get("/")
   public async listStockEntries(
     @Query() page: number = 1,
-    @Query() limit: number = 10
-  ): Promise<{ data: StockEntry[]; totalPages: number }> {
+    @Query() limit: number = 10,
+    @Query() search?: string,
+    @Query() status?: StockStatus
+  ): Promise<{ data: StockEntry[]; totalPages: number; totalCount: number; summary: StockSummary }> {
     return await this.stockService.getAllStock({ 
       page: Number(page), 
-      limit: Number(limit) 
+      limit: Number(limit),
+      search,
+      status,
     });
   }
 
@@ -36,5 +41,13 @@ export class StockController extends Controller {
   ): Promise<StockEntry> {
     editStockSchema.parse(requestBody);
     return await this.stockService.editStock(id, requestBody);
+  }
+
+  @Delete("/{id}")
+  @SuccessResponse(200, "Deleted")
+  public async deleteStockEntry(
+    @Path() id: string
+  ): Promise<DeleteStockResponse> {
+    return await this.stockService.deleteStock(id);
   }
 }

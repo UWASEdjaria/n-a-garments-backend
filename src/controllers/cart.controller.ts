@@ -1,8 +1,8 @@
 import { Controller, Route, Get, Post, Put, Delete, Body, Path, Tags, Security, Request, SuccessResponse, Response } from 'tsoa';
 import express from 'express';
-import { CartService } from '../services/cart.service';
-import { AddCartItemRequest, UpdateCartItemRequest, CartResponse } from '../interfaces/cart.interface';
-import { getUser } from '../utils/getUser';
+import { CartService } from '../services/cart.service.js';
+import { AddCartItemRequest, UpdateCartItemRequest, CartResponse } from '../interfaces/cart.interface.js';
+import { getUser } from '../utils/getUser.js';
 
 const cartService = new CartService();
 

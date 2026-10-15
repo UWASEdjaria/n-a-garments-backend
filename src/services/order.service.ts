@@ -1,8 +1,10 @@
 import { Prisma, PrismaClient } from '@prisma/client';
-import { OrderData, GuestPlaceOrderRequest, PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface';
-import { AppError } from '../utils/appError';
+import { OrderData, GuestPlaceOrderRequest, PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface.js';
+import { AppError } from '../utils/appError.js';
+import { NotificationService } from './notification.service.js';
 
 const prisma = new PrismaClient();
+const notificationService = new NotificationService();
 
 export class OrderService {
 
@@ -21,6 +23,7 @@ export class OrderService {
     if (!cart || cart.items.length === 0) throw new AppError('Your cart is empty', 400);
 
     for (const item of cart.items) {
+      if (item.product.productType !== 'READY_TO_WEAR') throw new AppError(`Only ready-to-wear products can be ordered`, 400);
       if (!item.product.isAvailable) throw new AppError(`Product "${item.product.name}" is no longer available`, 400);
       if (item.product.stockQuantity < item.quantity) throw new AppError(`Insufficient stock for "${item.product.name}"`, 400);
     }
@@ -58,6 +61,21 @@ export class OrderService {
       return newOrder;
     });
 
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+      await notificationService.createNotification({
+        type: 'ORDER_RECEIVED',
+        title: 'New order received',
+        message: `${user?.name ?? 'A customer'} placed a new order worth GHC ${Number(order.totalAmount).toFixed(2)}.`,
+        resourceType: 'ORDER',
+        resourceId: order.id,
+        actorName: user?.name ?? null,
+        actorEmail: user?.email ?? null,
+      });
+    } catch (error) {
+      console.error('Failed to create admin notification for order:', error);
+    }
+
     return { success: true, message: 'Order placed successfully', data: this.formatOrder(order) };
   }
 
@@ -81,6 +99,7 @@ export class OrderService {
     for (const [productId, quantity] of quantitiesByProduct) {
       const product = productById.get(productId);
       if (!product) throw new AppError('One or more products were not found', 404);
+      if (product.productType !== 'READY_TO_WEAR') throw new AppError('Only ready-to-wear products can be ordered', 400);
       if (!product.isAvailable) throw new AppError(`Product "${product.name}" is no longer available`, 400);
       if (product.stockQuantity < quantity) throw new AppError(`Insufficient stock for "${product.name}"`, 400);
     }
@@ -126,6 +145,20 @@ export class OrderService {
       return newOrder;
     });
 
+    try {
+      await notificationService.createNotification({
+        type: 'ORDER_RECEIVED',
+        title: 'New guest order received',
+        message: `${body.name} placed a new order worth GHC ${Number(order.totalAmount).toFixed(2)}.`,
+        resourceType: 'ORDER',
+        resourceId: order.id,
+        actorName: body.name,
+        actorEmail: body.email,
+      });
+    } catch (error) {
+      console.error('Failed to create admin notification for guest order:', error);
+    }
+
     return { success: true, message: 'Guest order placed successfully', data: this.formatOrder(order) };
   }
 
@@ -168,9 +201,40 @@ export class OrderService {
   }
 
   async updateOrderStatus(orderId: string, body: UpdateOrderStatusRequest): Promise<OrderResponse> {
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: { include: { product: true } } } });
     if (!order) throw new AppError('Order not found', 404);
-    const updated = await prisma.order.update({ where: { id: orderId }, data: { status: body.status }, include: { items: true } });
+
+    const previousStatus = order.status;
+    const updated = await prisma.order.update({ where: { id: orderId }, data: { status: body.status }, include: { items: { include: { product: true } } } });
+
+    // Restore stock if order was cancelled and it was previously not cancelled
+    if (body.status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
+      for (const item of order.items) {
+        if (item.product.productType === 'READY_TO_WEAR') {
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: { stockQuantity: { increment: item.quantity } },
+          });
+        }
+      }
+    }
+
+    // If order was previously cancelled and is now being restored, deduct stock again
+    if (previousStatus === 'CANCELLED' && body.status !== 'CANCELLED') {
+      for (const item of order.items) {
+        if (item.product.productType === 'READY_TO_WEAR') {
+          const product = await prisma.product.findUnique({ where: { id: item.productId } });
+          if (!product || product.stockQuantity < item.quantity) {
+            throw new AppError(`Insufficient stock to restore order for "${item.product.name}"`, 400);
+          }
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: { stockQuantity: { decrement: item.quantity } },
+          });
+        }
+      }
+    }
+
     return { success: true, message: 'Order status updated', data: this.formatOrder(updated) };
   }
 }
