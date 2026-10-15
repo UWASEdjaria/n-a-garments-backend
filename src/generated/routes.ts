@@ -16,6 +16,8 @@ import { OrderController } from './../controllers/order.controller.js';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { GuestOrderController } from './../controllers/guest-order.controller.js';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { CurrencyController } from './../controllers/currency.controller.js';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { ContactController } from './../controllers/contact.controller.js';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { CategoryController } from './../controllers/category.controller.js';
@@ -292,6 +294,32 @@ const models: TsoaRoute.Models = {
             "phone": {"dataType":"string"},
             "shippingAddr": {"dataType":"string","required":true},
             "items": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"color":{"dataType":"string"},"size":{"dataType":"string"},"quantity":{"dataType":"double","required":true},"productId":{"dataType":"string","required":true}}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CountryCurrency": {
+        "dataType": "refObject",
+        "properties": {
+            "countryCode": {"dataType":"string","required":true},
+            "countryName": {"dataType":"string","required":true},
+            "flag": {"dataType":"string","required":true},
+            "currencyCode": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "Record_string.number_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{},"additionalProperties":{"dataType":"double"},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ExchangeRatesResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "baseCurrency": {"dataType":"string","required":true},
+            "rates": {"ref":"Record_string.number_","required":true},
+            "source": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["live"]},{"dataType":"enum","enums":["fallback"]}],"required":true},
         },
         "additionalProperties": false,
     },
@@ -1411,6 +1439,64 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 201,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCurrencyController_getCountries: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/currency/countries',
+            ...(fetchMiddlewares<RequestHandler>(CurrencyController)),
+            ...(fetchMiddlewares<RequestHandler>(CurrencyController.prototype.getCountries)),
+
+            async function CurrencyController_getCountries(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCurrencyController_getCountries, request, response });
+
+                const controller = new CurrencyController();
+
+              await templateService.apiHandler({
+                methodName: 'getCountries',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCurrencyController_getRates: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/currency/rates',
+            ...(fetchMiddlewares<RequestHandler>(CurrencyController)),
+            ...(fetchMiddlewares<RequestHandler>(CurrencyController.prototype.getRates)),
+
+            async function CurrencyController_getRates(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCurrencyController_getRates, request, response });
+
+                const controller = new CurrencyController();
+
+              await templateService.apiHandler({
+                methodName: 'getRates',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
               });
             } catch (err) {
                 return next(err);

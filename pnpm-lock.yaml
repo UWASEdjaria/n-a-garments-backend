@@ -225,6 +225,9 @@ importers:
       cors:
         specifier: ^2.8.6
         version: 2.8.6
+      country-to-currency:
+        specifier: ^3.0.1
+        version: 3.0.1
       dotenv:
         specifier: ^18.0.3
         version: 18.0.3
@@ -943,6 +946,9 @@ packages:
   cors@2.8.6:
     resolution: {integrity: sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==}
     engines: {node: '>= 0.10'}
+
+  country-to-currency@3.0.1:
+    resolution: {integrity: sha512-FAo2ga8296d0Ra6vj9TB4Kax36AmqrGEc0aoLflCx5ijMtifNwA8lCqQsFfTLP2lRVKHWh/DedSpqI6v9VHyjw==}
 
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
@@ -2607,6 +2613,8 @@ snapshots:
     dependencies:
       object-assign: 4.1.1
       vary: 1.1.2
+
+  country-to-currency@3.0.1: {}
 
   create-require@1.1.1: {}
 

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
- "scripts": {
+  "scripts": {
     "tsoa:gen": "tsoa spec-and-routes",
     "dev": "nodemon --watch src -e ts --exec \"pnpm tsoa:gen && tsx src/server.ts\"",
     "build": "pnpm tsoa:gen && tsc",
@@ -27,6 +27,7 @@
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
+    "country-to-currency": "^3.0.1",
     "dotenv": "^18.0.3",
     "express": "^5.2.1",
     "helmet": "^8.3.0",

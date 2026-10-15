@@ -704,6 +704,63 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"CountryCurrency": {
+				"properties": {
+					"countryCode": {
+						"type": "string"
+					},
+					"countryName": {
+						"type": "string"
+					},
+					"flag": {
+						"type": "string"
+					},
+					"currencyCode": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"countryCode",
+					"countryName",
+					"flag",
+					"currencyCode"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Record_string.number_": {
+				"properties": {},
+				"additionalProperties": {
+					"type": "number",
+					"format": "double"
+				},
+				"type": "object",
+				"description": "Construct a type with a set of properties K of type T"
+			},
+			"ExchangeRatesResponse": {
+				"properties": {
+					"baseCurrency": {
+						"type": "string"
+					},
+					"rates": {
+						"$ref": "#/components/schemas/Record_string.number_"
+					},
+					"source": {
+						"type": "string",
+						"enum": [
+							"live",
+							"fallback"
+						]
+					}
+				},
+				"required": [
+					"baseCurrency",
+					"rates",
+					"source"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"ContactMessageData": {
 				"properties": {
 					"id": {
@@ -2552,6 +2609,53 @@
 						}
 					}
 				}
+			}
+		},
+		"/currency/countries": {
+			"get": {
+				"operationId": "GetCountries",
+				"responses": {
+					"200": {
+						"description": "Supported countries retrieved",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/CountryCurrency"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Currency"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/currency/rates": {
+			"get": {
+				"operationId": "GetRates",
+				"responses": {
+					"200": {
+						"description": "Exchange rates retrieved",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ExchangeRatesResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Currency"
+				],
+				"security": [],
+				"parameters": []
 			}
 		},
 		"/contact": {
