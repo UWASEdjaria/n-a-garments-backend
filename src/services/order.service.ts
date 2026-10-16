@@ -12,7 +12,7 @@ export class OrderService {
     return {
       ...order,
       totalAmount: Number(order.totalAmount),
-      items: order.items.map((item) => ({ ...item, purchasePrice: Number(item.purchasePrice) })),
+      items: order.items.map((item) => ({ ...item, purchasePrice: Number(item.purchaseprice) })),
     };
   }
 
@@ -238,3 +238,4 @@ export class OrderService {
     return { success: true, message: 'Order status updated', data: this.formatOrder(updated) };
   }
 }
+
