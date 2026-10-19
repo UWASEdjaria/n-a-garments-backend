@@ -125,7 +125,7 @@ model OrderItem {
   orderId       String
   productId     String
   quantity      Int
-  purchasePrice Decimal @db.Decimal(10, 2)
+  purchaseprice Decimal? @db.Decimal(10, 2)
   size          String?
   color         String?
   order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
