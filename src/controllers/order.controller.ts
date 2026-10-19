@@ -13,6 +13,7 @@ export class OrderController extends Controller {
 
   /** Place a new order from current cart — Customer */
   @Post()
+  @Security('jwt', ['CUSTOMER'])
   @SuccessResponse('201', 'Created')
   @Response(400, 'Bad Request')
   public async placeOrder(@Request() request: express.Request, @Body() requestBody: PlaceOrderRequest): Promise<OrderResponse> {

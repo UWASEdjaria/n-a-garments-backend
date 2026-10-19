@@ -43,7 +43,7 @@ model Product {
   name              String
   slug              String         @unique
   description       String
-  price             Decimal        @db.Decimal(10, 2)
+  price             Decimal?        @db.Decimal(10, 2)
   stockQuantity     Int            @default(0)
   minimumStockLevel Int            @default(5)
   maximumStockLevel Int            @default(100)

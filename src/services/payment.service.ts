@@ -1,351 +1,494 @@
-import { randomUUID } from 'node:crypto';
+﻿import { randomUUID } from 'node:crypto';
 import { PrismaClient, type Payment, type Prisma } from '@prisma/client';
-import { InitiateGuestPaymentDTO, InitiatePaymentDTO, UpdatePaymentStatusDTO, PaymentResponse, PaymentAttemptSummary } from '../interfaces/payment.interface.js';
+import {
+  InitiateGuestPaymentDTO,
+  InitiatePaymentDTO,
+  UpdatePaymentStatusDTO,
+  PaymentResponse,
+  PaymentAttemptSummary,
+} from '../interfaces/payment.interface.js';
 import { AppError } from '../utils/appError.js';
 import { PaypackRequestError, PaypackService } from './paypack.service.js';
+import { isRetryEligible } from './payment-retry.js';
 
 const prisma = new PrismaClient();
-const configuredPendingMinutes = Number.parseInt(process.env.PAYMENT_PENDING_TIMEOUT_MINUTES || '15', 10);
-const pendingTimeoutMinutes = Number.isFinite(configuredPendingMinutes) && configuredPendingMinutes > 0
-  ? configuredPendingMinutes
-  : 15;
 
 const formatRwandaPhone = (phone: string): string => {
   const cleaned = phone.replace(/\D/g, '');
+
   if (cleaned.startsWith('07') && cleaned.length === 10) {
     return `250${cleaned.substring(1)}`;
   }
+
   if (cleaned.startsWith('7') && cleaned.length === 9) {
     return `250${cleaned}`;
   }
+
   return cleaned;
 };
 
-const isRetryEligible = (payment: Pick<Payment, 'status' | 'createdAt'>, now = Date.now()): boolean => {
-  if (payment.status === 'FAILED' || payment.status === 'CANCELLED') {
-    return true;
-  }
-
-  return payment.status === 'PENDING'
-    && now - payment.createdAt.getTime() >= pendingTimeoutMinutes * 60_000;
-};
 
 export class PaymentService {
   private paypackService = new PaypackService();
 
-  public async initiateGuestPayment(data: InitiateGuestPaymentDTO): Promise<PaymentResponse> {
+  public async initiateGuestPayment(
+    data: InitiateGuestPaymentDTO
+  ): Promise<PaymentResponse> {
     const { email, ...paymentData } = data;
-    return this.initiatePayment(paymentData, email);
+
+    return this.initiatePayment(paymentData, undefined, email);
   }
 
-  public async initiatePayment(data: InitiatePaymentDTO, guestEmail?: string): Promise<PaymentResponse> {
+  public async initiatePayment(
+    data: InitiatePaymentDTO,
+    userId?: string,
+    guestEmail?: string
+  ): Promise<PaymentResponse> {
     if (data.paymentMethod === 'MOMO' && !data.phoneNumber) {
-      throw new AppError('Phone number is required for Mobile Money payments.', 400);
+      throw new AppError(
+        'Phone number is required for Mobile Money payments.',
+        400
+      );
     }
 
     let payment: Payment;
-    try {
-      payment = await prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
-        const order = await transaction.order.findUnique({ where: { id: data.orderId } });
-        if (!order) {
-          throw new AppError('Order not found.', 404);
-        }
 
-        if (guestEmail !== undefined) {
-          if (order.userId !== null || order.guestEmail?.toLowerCase() !== guestEmail.trim().toLowerCase()) {
+    try {
+      payment = await prisma.$transaction(
+        async (transaction: Prisma.TransactionClient) => {
+          const order = await transaction.order.findUnique({
+            where: { id: data.orderId },
+          });
+
+          if (!order) {
             throw new AppError('Order not found.', 404);
           }
-        } else if (order.userId === null) {
-          throw new AppError('Order not found.', 404);
-        }
 
-        if (Number(order.totalAmount) !== data.amount) {
-          throw new AppError('Payment amount must match the order total.', 400);
-        }
+          if (guestEmail !== undefined) {
+            if (
+              order.userId !== null ||
+              order.guestEmail?.trim().toLowerCase() !==
+                guestEmail.trim().toLowerCase()
+            ) {
+              throw new AppError('Order not found.', 404);
+            }
+          } else if (!userId || order.userId !== userId) {
+            throw new AppError('Order not found.', 404);
+          }
 
-        const successfulAttempt = await transaction.payment.findFirst({
-          where: { orderId: order.id, status: { in: ['PAID', 'SUCCESSFUL'] } },
-        });
-        if (order.paymentStatus === 'PAID' || successfulAttempt) {
-          throw new AppError('This order has already been paid.', 409);
-        }
+          if (Number(order.totalAmount) !== data.amount) {
+            throw new AppError(
+              'Payment amount must match the order total.',
+              400
+            );
+          }
 
-        const pendingAttempt = await transaction.payment.findFirst({
-          where: { orderId: order.id, status: 'PENDING' },
-          orderBy: { createdAt: 'desc' },
-        });
-        if (pendingAttempt && !isRetryEligible(pendingAttempt)) {
-          throw new AppError('A payment attempt is already pending. Check its status before retrying.', 409);
-        }
-
-        if (pendingAttempt) {
-          await transaction.payment.update({
-            where: { id: pendingAttempt.id },
-            data: { status: 'FAILED' },
+          const successfulAttempt = await transaction.payment.findFirst({
+            where: {
+              orderId: order.id,
+              status: { in: ['PAID', 'SUCCESSFUL'] },
+            },
           });
+
+          if (order.paymentStatus === 'PAID' || successfulAttempt) {
+            throw new AppError('This order has already been paid.', 409);
+          }
+
+          const pendingAttempt = await transaction.payment.findFirst({
+            where: {
+              orderId: order.id,
+              status: 'PENDING',
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (pendingAttempt && !isRetryEligible(pendingAttempt)) {
+            throw new AppError(
+              'A payment attempt is already pending. Check its status before retrying.',
+              409
+            );
+          }
+
+          if (pendingAttempt) {
+            await transaction.payment.update({
+              where: { id: pendingAttempt.id },
+              data: { status: 'FAILED' },
+            });
+          }
+
+          const attempt = await transaction.payment.create({
+            data: {
+              orderId: order.id,
+              amount: order.totalAmount,
+              paymentMethod: data.paymentMethod,
+              status: 'PENDING',
+              ref: `ATTEMPT-${randomUUID()}`,
+              phoneNumber: data.phoneNumber
+                ? formatRwandaPhone(data.phoneNumber)
+                : null,
+            },
+          });
+
+          await transaction.order.update({
+            where: { id: order.id },
+            data: { paymentStatus: 'PENDING' },
+          });
+
+          return attempt;
         }
-
-        const attempt = await transaction.payment.create({
-          data: {
-            orderId: order.id,
-            amount: order.totalAmount,
-            paymentMethod: data.paymentMethod,
-            status: 'PENDING',
-            ref: `ATTEMPT-${randomUUID()}`,
-            phoneNumber: data.phoneNumber ? formatRwandaPhone(data.phoneNumber) : null,
-          },
-        });
-
-        await transaction.order.update({
-          where: { id: order.id },
-          data: { paymentStatus: 'PENDING' },
-        });
-        return attempt;
-      });
+      );
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
       }
 
       const activeAttempt = await prisma.payment.findFirst({
-        where: { orderId: data.orderId, status: 'PENDING' },
+        where: {
+          orderId: data.orderId,
+          status: 'PENDING',
+        },
       });
+
       if (activeAttempt) {
-        throw new AppError('A payment attempt is already in progress.', 409);
+        throw new AppError(
+          'A payment attempt is already in progress.',
+          409
+        );
       }
+
       throw error;
     }
 
     if (data.paymentMethod === 'MOMO') {
       try {
-        const paypackResult = await this.paypackService.cashIn(payment.phoneNumber!, payment.amount.toNumber());
+        const paypackResult = await this.paypackService.cashIn(
+          payment.phoneNumber!,
+          payment.amount.toNumber()
+        );
+
         payment = await prisma.payment.update({
           where: { id: payment.id },
           data: { ref: paypackResult.ref },
         });
       } catch (error) {
-        if (error instanceof PaypackRequestError && error.definitivelyRejected) {
-  await prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
-    await transaction.payment.update({
-      where: { id: payment.id },
-      data: { status: 'FAILED' },
-    });
+        if (
+          error instanceof PaypackRequestError &&
+          error.definitivelyRejected
+        ) {
+          await prisma.$transaction(
+            async (transaction: Prisma.TransactionClient) => {
+              await transaction.payment.update({
+                where: { id: payment.id },
+                data: { status: 'FAILED' },
+              });
 
-    if (payment.orderId) {
-      await transaction.order.updateMany({
-        where: {
-          id: payment.orderId,
-          paymentStatus: { not: 'PAID' },
-          payments: { none: { status: 'PENDING' } },
-        },
-        data: { paymentStatus: 'FAILED' },
-       });
-      }
-     });
-    }
+              if (payment.orderId) {
+                await transaction.order.updateMany({
+                  where: {
+                    id: payment.orderId,
+                    paymentStatus: { not: 'PAID' },
+                    payments: { none: { status: 'PENDING' } },
+                  },
+                  data: { paymentStatus: 'FAILED' },
+                });
+              }
+            }
+          );
+        }
+
         throw error;
       }
-    } else if (data.paymentMethod === 'CASH_ON_DELIVERY' || data.paymentMethod === 'CARD') {
+    } else if (
+      data.paymentMethod === 'CASH_ON_DELIVERY' ||
+      data.paymentMethod === 'CARD'
+    ) {
       payment = await prisma.payment.update({
         where: { id: payment.id },
-        data: { ref: `${data.paymentMethod === 'CARD' ? 'CARD' : 'COD'}-${randomUUID()}` },
+        data: {
+          ref: `${
+            data.paymentMethod === 'CARD' ? 'CARD' : 'COD'
+          }-${randomUUID()}`,
+        },
       });
     }
 
-    const message = data.paymentMethod === 'CASH_ON_DELIVERY'
-      ? 'Cash on Delivery selected. Payment will be collected upon delivery.'
-      : data.paymentMethod === 'MOMO'
-        ? 'Mobile Money prompt sent to user phone. Please approve the prompt.'
-        : 'Card payment initialized.';
+    const message =
+      data.paymentMethod === 'CASH_ON_DELIVERY'
+        ? 'Cash on Delivery selected. Payment will be collected upon delivery.'
+        : data.paymentMethod === 'MOMO'
+          ? 'Mobile Money prompt sent to user phone. Please approve the prompt.'
+          : 'Card payment initialized.';
 
     return this.toResponse(payment, message, false);
   }
 
-  public async handlePaypackWebhook(payload: { ref: string; status: string }): Promise<void> {
-  const webhookStatus = payload.status.toLowerCase();
-  const isSuccess = ['successful', 'completed', 'paid'].includes(webhookStatus);
-  const failureStatus = webhookStatus === 'cancelled'
-    ? 'CANCELLED'
-    : ['failed', 'failure'].includes(webhookStatus)
-      ? 'FAILED'
-      : null;
-
-  if (!isSuccess && !failureStatus) {
-    return;
-  }
-
-  await prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
-    const payment = await transaction.payment.findUnique({
+  public async handlePaypackWebhook(payload: {
+    ref: string;
+    status: string;
+  }): Promise<void> {
+    const paymentRecord = await prisma.payment.findUnique({
       where: { ref: payload.ref },
     });
 
-    if (!payment) {
-      console.warn(`Paypack webhook received for unknown reference: ${payload.ref}`);
-      return;
-    }
-
-    if (payment.status === 'PAID' || payment.status === 'SUCCESSFUL') {
-      return;
-    }
-
-    if (!payment.orderId) {
-      console.error(
-        `Paypack webhook received for payment ${payment.id} without a regular order ID. Custom-order payment handling is not implemented.`
+    if (!paymentRecord) {
+      throw new AppError(
+        'Payment reference is not available yet. Please retry the webhook.',
+        503
       );
+    }
+
+    const verifiedTransaction = await this.paypackService.getTransaction(payload.ref);
+
+    if (
+      !verifiedTransaction ||
+      typeof verifiedTransaction.ref !== 'string' ||
+      verifiedTransaction.ref !== payload.ref ||
+      typeof verifiedTransaction.kind !== 'string' ||
+      verifiedTransaction.kind.toUpperCase() !== 'CASHIN' ||
+      typeof verifiedTransaction.status !== 'string' ||
+      !verifiedTransaction.status.trim() ||
+      !['number', 'string'].includes(typeof verifiedTransaction.amount) ||
+      String(verifiedTransaction.amount).trim() === ''
+    ) {
+      console.error('Paypack transaction details were invalid or did not match the reference.');
       return;
     }
 
-    if (isSuccess) {
-      const orderUpdate = await transaction.order.updateMany({
-        where: {
-          id: payment.orderId,
-          paymentStatus: { not: 'PAID' },
-        },
-        data: { paymentStatus: 'PAID' },
-      });
+    const verifiedAmount = Number(verifiedTransaction.amount);
+    const recordedAmount = Number(paymentRecord.amount);
 
-      await transaction.payment.updateMany({
-        where: {
-          id: payment.id,
-          status: { notIn: ['PAID', 'SUCCESSFUL'] },
-        },
-        data: {
-          status: orderUpdate.count === 1 ? 'PAID' : 'SUCCESSFUL',
-        },
-      });
-
-      if (orderUpdate.count === 1) {
-        await transaction.payment.updateMany({
-          where: {
-            orderId: payment.orderId,
-            id: { not: payment.id },
-            status: 'PENDING',
-          },
-          data: { status: 'CANCELLED' },
-        });
-      }
-
-      if (orderUpdate.count === 0) {
-        console.error(
-          `Paypack reported a second successful attempt for already-paid order ${payment.orderId}; reference ${payload.ref} requires reconciliation.`
-        );
-      }
-
+    if (
+      !Number.isFinite(verifiedAmount) ||
+      verifiedAmount !== recordedAmount
+    ) {
+      console.error('Paypack transaction amount did not match the recorded payment.');
       return;
     }
 
-    if (!failureStatus) {
+    const webhookStatus = verifiedTransaction.status.trim().toLowerCase();
+    const receivedStatus = payload.status.trim().toLowerCase();
+
+    if (
+      !['successful', 'failed'].includes(receivedStatus) ||
+      receivedStatus !== webhookStatus
+    ) {
+      console.warn('Paypack webhook status did not match the verified transaction status.');
       return;
     }
 
-    await transaction.payment.updateMany({
-      where: {
-        id: payment.id,
-        status: { notIn: ['PAID', 'SUCCESSFUL'] },
-      },
-      data: { status: failureStatus },
-    });
+    const isSuccess = webhookStatus === 'successful';
 
-    await transaction.order.updateMany({
-      where: {
-        id: payment.orderId,
-        paymentStatus: { not: 'PAID' },
-        payments: { none: { status: 'PENDING' } },
-      },
-      data: { paymentStatus: failureStatus },
-    });
-  });
-}
-    public async updatePaymentStatus(
-    paymentId: string,
-    dto: UpdatePaymentStatusDTO
-  ): Promise<PaymentResponse> {
-    return prisma.$transaction(async (transaction: Prisma.TransactionClient) => {
-      const payment = await transaction.payment.findUnique({
-        where: { id: paymentId },
-      });
+    const failureStatus =
+      webhookStatus === 'failed' ? 'FAILED' : null;
 
-      if (!payment) {
-        throw new AppError('Payment record not found.', 404);
-      }
+    if (!isSuccess && !failureStatus) {
+      return;
+    }
 
-      if (!payment.orderId) {
-        throw new AppError(
-          'This payment is not linked to a regular order. Custom-order payment handling is not implemented.',
-          400
-        );
-      }
-
-      if (dto.status === 'PAID' || dto.status === 'SUCCESSFUL') {
-        const otherSuccessfulAttempt = await transaction.payment.findFirst({
-          where: {
-            orderId: payment.orderId,
-            id: { not: payment.id },
-            status: { in: ['PAID', 'SUCCESSFUL'] },
-          },
+    await prisma.$transaction(
+      async (transaction: Prisma.TransactionClient) => {
+        const payment = await transaction.payment.findUnique({
+          where: { ref: payload.ref },
         });
 
-        if (otherSuccessfulAttempt) {
-          throw new AppError(
-            'Another payment attempt has already succeeded for this order.',
-            409
+        if (!payment) {
+          console.warn(
+            `Paypack webhook received for unknown reference: ${payload.ref}`
           );
+          return;
         }
-      }
 
-      const updated = await transaction.payment.update({
-        where: { id: paymentId },
-        data: { status: dto.status },
-      });
+        if (
+          payment.status === 'PAID' ||
+          payment.status === 'SUCCESSFUL'
+        ) {
+          return;
+        }
 
-      if (dto.status === 'PAID' || dto.status === 'SUCCESSFUL') {
-        await transaction.order.update({
-          where: { id: payment.orderId },
-          data: { paymentStatus: 'PAID' },
-        });
+        if (!payment.orderId) {
+          console.error(
+            `Paypack webhook received for payment ${payment.id} without a regular order ID. Custom-order payment handling is not implemented.`
+          );
+          return;
+        }
+
+        if (isSuccess) {
+          const orderUpdate = await transaction.order.updateMany({
+            where: {
+              id: payment.orderId,
+              paymentStatus: { not: 'PAID' },
+            },
+            data: { paymentStatus: 'PAID' },
+          });
+
+          await transaction.payment.updateMany({
+            where: {
+              id: payment.id,
+              status: { notIn: ['PAID', 'SUCCESSFUL'] },
+            },
+            data: {
+              status: orderUpdate.count === 1 ? 'PAID' : 'SUCCESSFUL',
+            },
+          });
+
+          if (orderUpdate.count === 1) {
+            await transaction.payment.updateMany({
+              where: {
+                orderId: payment.orderId,
+                id: { not: payment.id },
+                status: 'PENDING',
+              },
+              data: { status: 'CANCELLED' },
+            });
+          }
+
+          if (orderUpdate.count === 0) {
+            console.error(
+              `Paypack reported a second successful attempt for already-paid order ${payment.orderId}; reference ${payload.ref} requires reconciliation.`
+            );
+          }
+
+          return;
+        }
+
+        if (!failureStatus) {
+          return;
+        }
 
         await transaction.payment.updateMany({
           where: {
-            orderId: payment.orderId,
-            id: { not: payment.id },
-            status: 'PENDING',
+            id: payment.id,
+            status: { notIn: ['PAID', 'SUCCESSFUL'] },
           },
-          data: { status: 'CANCELLED' },
+          data: { status: failureStatus },
         });
-      } else if (dto.status === 'PENDING') {
-        await transaction.order.updateMany({
-          where: {
-            id: payment.orderId,
-            paymentStatus: { not: 'PAID' },
-          },
-          data: { paymentStatus: 'PENDING' },
-        });
-      } else {
+
         await transaction.order.updateMany({
           where: {
             id: payment.orderId,
             paymentStatus: { not: 'PAID' },
             payments: { none: { status: 'PENDING' } },
           },
-          data: { paymentStatus: dto.status },
+          data: { paymentStatus: failureStatus },
         });
       }
-
-      return this.toResponse(
-        updated,
-        `Payment status updated to ${dto.status}`,
-        isRetryEligible(updated)
-      );
-    });
+    );
   }
 
-  public async getPaymentByOrderId(orderId: string): Promise<PaymentResponse> {
+  public async updatePaymentStatus(
+    paymentId: string,
+    dto: UpdatePaymentStatusDTO
+  ): Promise<PaymentResponse> {
+    return prisma.$transaction(
+      async (transaction: Prisma.TransactionClient) => {
+        const payment = await transaction.payment.findUnique({
+          where: { id: paymentId },
+        });
+
+        if (!payment) {
+          throw new AppError('Payment record not found.', 404);
+        }
+
+        if (!payment.orderId) {
+          throw new AppError(
+            'This payment is not linked to a regular order. Custom-order payment handling is not implemented.',
+            400
+          );
+        }
+
+        if (dto.status === 'PAID' || dto.status === 'SUCCESSFUL') {
+          const otherSuccessfulAttempt =
+            await transaction.payment.findFirst({
+              where: {
+                orderId: payment.orderId,
+                id: { not: payment.id },
+                status: { in: ['PAID', 'SUCCESSFUL'] },
+              },
+            });
+
+          if (otherSuccessfulAttempt) {
+            throw new AppError(
+              'Another payment attempt has already succeeded for this order.',
+              409
+            );
+          }
+        }
+
+        const updated = await transaction.payment.update({
+          where: { id: paymentId },
+          data: { status: dto.status },
+        });
+
+        if (dto.status === 'PAID' || dto.status === 'SUCCESSFUL') {
+          await transaction.order.update({
+            where: { id: payment.orderId },
+            data: { paymentStatus: 'PAID' },
+          });
+
+          await transaction.payment.updateMany({
+            where: {
+              orderId: payment.orderId,
+              id: { not: payment.id },
+              status: 'PENDING',
+            },
+            data: { status: 'CANCELLED' },
+          });
+        } else if (dto.status === 'PENDING') {
+          await transaction.order.updateMany({
+            where: {
+              id: payment.orderId,
+              paymentStatus: { not: 'PAID' },
+            },
+            data: { paymentStatus: 'PENDING' },
+          });
+        } else {
+          await transaction.order.updateMany({
+            where: {
+              id: payment.orderId,
+              paymentStatus: { not: 'PAID' },
+              payments: { none: { status: 'PENDING' } },
+            },
+            data: { paymentStatus: dto.status },
+          });
+        }
+
+        return this.toResponse(
+          updated,
+          `Payment status updated to ${dto.status}`,
+          isRetryEligible(updated)
+        );
+      }
+    );
+  }
+
+  public async getPaymentByOrderId(
+    orderId: string,
+    userId?: string,
+    guestEmail?: string
+  ): Promise<PaymentResponse> {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      select: { id: true, paymentStatus: true },
+      select: {
+        id: true,
+        userId: true,
+        guestEmail: true,
+        paymentStatus: true,
+      },
     });
 
     if (!order) {
+      throw new AppError('Payment not found for this order.', 404);
+    }
+
+    if (guestEmail !== undefined) {
+      if (
+        order.userId !== null ||
+        order.guestEmail?.trim().toLowerCase() !==
+          guestEmail.trim().toLowerCase()
+      ) {
+        throw new AppError('Payment not found for this order.', 404);
+      }
+    } else if (!userId || order.userId !== userId) {
       throw new AppError('Payment not found for this order.', 404);
     }
 
@@ -360,8 +503,8 @@ export class PaymentService {
       throw new AppError('Payment not found for this order.', 404);
     }
 
-    const hasSuccessfulAttempt = payments.some(
-      (attempt) => ['PAID', 'SUCCESSFUL'].includes(attempt.status)
+    const hasSuccessfulAttempt = payments.some((attempt) =>
+      ['PAID', 'SUCCESSFUL'].includes(attempt.status)
     );
 
     const attempts: PaymentAttemptSummary[] = payments.map((attempt) => ({
@@ -378,9 +521,9 @@ export class PaymentService {
       message: 'Payment attempts retrieved successfully.',
       data: this.paymentData(
         payment,
-        order.paymentStatus !== 'PAID'
-          && !hasSuccessfulAttempt
-          && isRetryEligible(payment),
+        order.paymentStatus !== 'PAID' &&
+          !hasSuccessfulAttempt &&
+          isRetryEligible(payment),
         attempts
       ),
     };
@@ -392,18 +535,21 @@ export class PaymentService {
   ): Promise<PaymentResponse> {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      select: { userId: true, guestEmail: true },
+      select: {
+        userId: true,
+        guestEmail: true,
+      },
     });
 
     if (
-      !order
-      || order.userId !== null
-      || order.guestEmail?.toLowerCase() !== email.trim().toLowerCase()
+      !order ||
+      order.userId !== null ||
+      order.guestEmail?.trim().toLowerCase() !== email.trim().toLowerCase()
     ) {
       throw new AppError('Payment not found for this order.', 404);
     }
 
-    return this.getPaymentByOrderId(orderId);
+    return this.getPaymentByOrderId(orderId, undefined, email);
   }
 
   private toResponse(
@@ -442,3 +588,5 @@ export class PaymentService {
     };
   }
 }
+
+

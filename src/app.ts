@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from 'express';
+﻿import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -11,7 +11,11 @@ const app: Application = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: [process.env.FRONTEND_URL, 'http://localhost:3000'].filter((origin): origin is string => Boolean(origin)), }));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+  },
+}));
 app.use(morgan('dev'));
 
 // Swagger UI
@@ -22,8 +26,13 @@ app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ success: true, message: 'nagarments API is running' });
 });
 
+app.head('/payments/webhook/paypack', (_req, res) => {
+  res.sendStatus(200);
+});
+
 RegisterRoutes(app);
 
 app.use(errorHandler);
 
 export default app;
+

@@ -13,7 +13,7 @@ export interface Product {
   name: string;
   slug: string;
   description: string;
-  price: number;
+  price: number | null;
   stockQuantity: number;
   minimumStockLevel: number;
   maximumStockLevel: number;
@@ -33,7 +33,7 @@ export interface CreateProductDTO {
   name: string;
   slug: string;
   description: string;
-  price: number;
+  price: number | null;
   stockQuantity?: number;
   minimumStockLevel?: number;
   maximumStockLevel?: number;
@@ -49,7 +49,7 @@ export interface UpdateProductDTO {
   name?: string;
   slug?: string;
   description?: string;
-  price?: number;
+  price?: number | null;
   stockQuantity?: number;
   minimumStockLevel?: number;
   maximumStockLevel?: number;

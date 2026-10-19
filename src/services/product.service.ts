@@ -21,7 +21,7 @@ export class ProductsServices {
     const primaryImageUrl = p.images?.find((img) => img.isPrimary)?.url || p.images?.[0]?.url;
     return {
       ...p,
-      price: Number(p.price),
+      price: p.price === null ? null : Number(p.price),
       productType: p.productType as Product['productType'],
       stockStatus: this.getStockStatus(p.stockQuantity, p.minimumStockLevel, p.maximumStockLevel),
       imageUrl: primaryImageUrl,
@@ -48,7 +48,7 @@ export class ProductsServices {
         name: data.name,
         slug: data.slug,
         description: data.description,
-        price: data.price,
+        price: data.price ?? null,
         stockQuantity: data.stockQuantity ?? 0,
         minimumStockLevel: data.minimumStockLevel ?? 5,
         maximumStockLevel: data.maximumStockLevel ?? 100,
@@ -133,11 +133,30 @@ export class ProductsServices {
 
     const resolvedUrl = await this.resolveImageUrl(image, data.imageUrl);
 
-    const minimumStockLevel = data.minimumStockLevel ?? product.minimumStockLevel;
-    const maximumStockLevel = data.maximumStockLevel ?? product.maximumStockLevel;
-    if (maximumStockLevel < minimumStockLevel) {
-      throw new AppError('Maximum stock threshold must be greater than or equal to the minimum threshold', 400);
-    }
+     const minimumStockLevel = data.minimumStockLevel ?? product.minimumStockLevel;
+const maximumStockLevel = data.maximumStockLevel ?? product.maximumStockLevel;
+
+if (maximumStockLevel < minimumStockLevel) {
+  throw new AppError('Maximum stock threshold must be greater than or equal to the minimum threshold', 400);
+}
+
+const nextProductType = data.productType ?? product.productType;
+const nextPrice = data.price !== undefined ? data.price : product.price;
+const nextPriceValue = nextPrice === null ? null : Number(nextPrice);
+
+if (
+  nextProductType === 'READY_TO_WEAR' &&
+  (nextPriceValue === null || nextPriceValue <= 0)
+) {
+  throw new AppError(
+    'Ready to Wear products must have a price greater than zero',
+    400,
+  );
+}
+
+if (nextPriceValue !== null && nextPriceValue <= 0) {
+  throw new AppError('Price must be greater than zero when provided', 400);
+}
 
     // If a new image is provided, delete all existing images first
     if (resolvedUrl && product.images.length > 0) {
