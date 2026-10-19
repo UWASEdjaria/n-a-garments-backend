@@ -163,7 +163,7 @@ const models: TsoaRoute.Models = {
             "name": {"dataType":"string","required":true},
             "slug": {"dataType":"string","required":true},
             "description": {"dataType":"string","required":true},
-            "price": {"dataType":"double","required":true},
+            "price": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
             "stockQuantity": {"dataType":"double","required":true},
             "minimumStockLevel": {"dataType":"double","required":true},
             "maximumStockLevel": {"dataType":"double","required":true},
@@ -1131,8 +1131,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 name: {"in":"formData","name":"name","required":true,"dataType":"string"},
                 slug: {"in":"formData","name":"slug","required":true,"dataType":"string"},
                 description: {"in":"formData","name":"description","required":true,"dataType":"string"},
-                price: {"in":"formData","name":"price","required":true,"dataType":"double"},
                 categoryId: {"in":"formData","name":"categoryId","required":true,"dataType":"string"},
+                price: {"in":"formData","name":"price","dataType":"string"},
                 stockQuantity: {"in":"formData","name":"stockQuantity","dataType":"double"},
                 minimumStockLevel: {"in":"formData","name":"minimumStockLevel","dataType":"double"},
                 maximumStockLevel: {"in":"formData","name":"maximumStockLevel","dataType":"double"},
@@ -1291,10 +1291,11 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsPaymentController_initiatePayment: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 body: {"in":"body","name":"body","required":true,"ref":"InitiatePaymentDTO"},
         };
         app.post('/payments/initiate',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(PaymentController)),
             ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.initiatePayment)),
 
@@ -1352,7 +1353,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsPaymentController_handlePaypackWebhook: Record<string, TsoaRoute.ParameterSchema> = {
-                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"status":{"dataType":"string"},"ref":{"dataType":"string"},"data":{"dataType":"nestedObjectLiteral","nestedProperties":{"status":{"dataType":"string","required":true},"ref":{"dataType":"string","required":true}}}}},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
         app.post('/payments/webhook/paypack',
             ...(fetchMiddlewares<RequestHandler>(PaymentController)),
@@ -1382,10 +1383,11 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsPaymentController_getPaymentByOrderId: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 orderId: {"in":"path","name":"orderId","required":true,"dataType":"string"},
         };
         app.get('/payments/order/:orderId',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(PaymentController)),
             ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.getPaymentByOrderId)),
 
@@ -1480,7 +1482,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 requestBody: {"in":"body","name":"requestBody","required":true,"ref":"PlaceOrderRequest"},
         };
         app.post('/orders',
-            authenticateMiddleware([{"jwt":[]}]),
+            authenticateMiddleware([{"jwt":["CUSTOMER"]}]),
             ...(fetchMiddlewares<RequestHandler>(OrderController)),
             ...(fetchMiddlewares<RequestHandler>(OrderController.prototype.placeOrder)),
 

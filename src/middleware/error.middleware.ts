@@ -8,6 +8,13 @@ export const errorHandler = (
   _next: NextFunction
 ): void => {
   // 1. TSOA Validation Errors
+  console.error('[Webhook diagnostic] Error details:', {
+    name: err?.name,
+    message: err?.message,
+    status: err?.status,
+    statusCode: err?.statusCode,
+    hasFields: Boolean(err?.fields),
+  });
   if (err?.fields || err?.status === 400) {
     res.status(400).json({
       success: false,

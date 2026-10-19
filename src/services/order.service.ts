@@ -12,8 +12,21 @@ export class OrderService {
     return {
       ...order,
       totalAmount: Number(order.totalAmount),
-      items: order.items.map((item) => ({ ...item, purchasePrice: Number(item.purchaseprice) })),
+      items: order.items.map((item) => ({ ...item, purchasePrice: Number(item.purchasePrice) })),
     };
+  }
+    private requireOrderPrice(
+    price: Prisma.Decimal | null,
+    productName: string,
+  ): Prisma.Decimal {
+    if (price === null || Number(price) <= 0) {
+      throw new AppError(
+        `Product "${productName}" must have a valid price to be ordered`,
+        400,
+      );
+    }
+
+    return price;
   }
 
   async placeOrder(userId: string, body: PlaceOrderRequest): Promise<OrderResponse> {
@@ -22,13 +35,28 @@ export class OrderService {
     const cart = await prisma.cart.findUnique({ where: { userId }, include: { items: { include: { product: true } } } });
     if (!cart || cart.items.length === 0) throw new AppError('Your cart is empty', 400);
 
-    for (const item of cart.items) {
-      if (item.product.productType !== 'READY_TO_WEAR') throw new AppError(`Only ready-to-wear products can be ordered`, 400);
-      if (!item.product.isAvailable) throw new AppError(`Product "${item.product.name}" is no longer available`, 400);
-      if (item.product.stockQuantity < item.quantity) throw new AppError(`Insufficient stock for "${item.product.name}"`, 400);
-    }
+       for (const item of cart.items) {
+      if (item.product.productType !== 'READY_TO_WEAR') {
+        throw new AppError('Only ready-to-wear products can be ordered', 400);
+      }
 
-    const totalAmount = cart.items.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0);
+      this.requireOrderPrice(item.product.price, item.product.name);
+
+      if (!item.product.isAvailable) {
+        throw new AppError(`Product "${item.product.name}" is no longer available`, 400);
+      }
+
+      if (item.product.stockQuantity < item.quantity) {
+        throw new AppError(`Insufficient stock for "${item.product.name}"`, 400);
+      }
+    }
+    const totalAmount = cart.items.reduce(
+      (sum, item) =>
+        sum +
+        Number(this.requireOrderPrice(item.product.price, item.product.name)) *
+          item.quantity,
+      0,
+    );
 
     const order = await prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
@@ -40,7 +68,10 @@ export class OrderService {
             create: cart.items.map((item) => ({
               productId: item.productId,
               quantity: item.quantity,
-              purchasePrice: item.product.price,
+              purchasePrice: this.requireOrderPrice(
+                item.product.price,
+                item.product.name,
+              ),
               size: item.size,
               color: item.color,
             })),
@@ -100,25 +131,38 @@ export class OrderService {
       const product = productById.get(productId);
       if (!product) throw new AppError('One or more products were not found', 404);
       if (product.productType !== 'READY_TO_WEAR') throw new AppError('Only ready-to-wear products can be ordered', 400);
+            this.requireOrderPrice(product.price, product.name);
       if (!product.isAvailable) throw new AppError(`Product "${product.name}" is no longer available`, 400);
       if (product.stockQuantity < quantity) throw new AppError(`Insufficient stock for "${product.name}"`, 400);
     }
 
-    const orderItems = body.items.map((item) => {
+       const orderItems = body.items.map((item) => {
       const product = productById.get(item.productId);
-      if (!product) throw new AppError('One or more products were not found', 404);
+
+      if (!product) {
+        throw new AppError('One or more products were not found', 404);
+      }
+
       return {
         productId: item.productId,
         quantity: item.quantity,
-        purchasePrice: product.price,
+        purchasePrice: this.requireOrderPrice(product.price, product.name),
         size: item.size ?? null,
         color: item.color ?? null,
       };
     });
-    const totalAmount = orderItems.reduce((sum, item) => {
+        const totalAmount = orderItems.reduce((sum, item) => {
       const product = productById.get(item.productId);
-      if (!product) throw new AppError('One or more products were not found', 404);
-      return sum + Number(product.price) * item.quantity;
+
+      if (!product) {
+        throw new AppError('One or more products were not found', 404);
+      }
+
+      return (
+        sum +
+        Number(this.requireOrderPrice(product.price, product.name)) *
+          item.quantity
+      );
     }, 0);
 
     const order = await prisma.$transaction(async (tx) => {

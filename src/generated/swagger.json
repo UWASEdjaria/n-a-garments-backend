@@ -313,7 +313,8 @@
 					},
 					"price": {
 						"type": "number",
-						"format": "double"
+						"format": "double",
+						"nullable": true
 					},
 					"stockQuantity": {
 						"type": "number",
@@ -2411,11 +2412,10 @@
 									"description": {
 										"type": "string"
 									},
-									"price": {
-										"type": "number",
-										"format": "double"
-									},
 									"categoryId": {
+										"type": "string"
+									},
+									"price": {
 										"type": "string"
 									},
 									"stockQuantity": {
@@ -2454,7 +2454,6 @@
 									"name",
 									"slug",
 									"description",
-									"price",
 									"categoryId"
 								]
 							}
@@ -2822,7 +2821,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [],
@@ -2903,40 +2904,7 @@
 					"Payments"
 				],
 				"security": [],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"properties": {
-									"status": {
-										"type": "string"
-									},
-									"ref": {
-										"type": "string"
-									},
-									"data": {
-										"properties": {
-											"status": {
-												"type": "string"
-											},
-											"ref": {
-												"type": "string"
-											}
-										},
-										"required": [
-											"status",
-											"ref"
-										],
-										"type": "object"
-									}
-								},
-								"type": "object"
-							}
-						}
-					}
-				}
+				"parameters": []
 			}
 		},
 		"/payments/order/{orderId}": {
@@ -2959,7 +2927,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [
@@ -3087,7 +3057,9 @@
 				],
 				"security": [
 					{
-						"jwt": []
+						"jwt": [
+							"CUSTOMER"
+						]
 					}
 				],
 				"parameters": [],

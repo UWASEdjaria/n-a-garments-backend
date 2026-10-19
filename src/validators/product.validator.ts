@@ -1,7 +1,24 @@
 import { z } from 'zod';
 
 export const ALLOWED_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as const;
-export const ALLOWED_COLORS = ['Black', 'White', 'Navy', 'Grey', 'Brown', 'Beige', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Orange', 'Purple'] as const;
+export const ALLOWED_COLORS = [
+  'Black',
+  'White',
+  'Navy',
+  'Navy Blue',
+  'Grey',
+  'Brown',
+  'Beige',
+  'Red',
+  'Blue',
+  'Green',
+  'Yellow',
+  'Pink',
+  'Orange',
+  'Purple',
+  'Sky Blue',
+  'Charcoal Grey',
+] as const;
 export const ALLOWED_PRODUCT_TYPES = ['READY_TO_WEAR', 'MADE_TO_ORDER'] as const;
 
 const sizeEnum = z.string().trim().min(1, 'Size cannot be empty');
@@ -12,7 +29,7 @@ const productFields = {
   name: z.string().min(3, 'Product name must be at least 3 characters'),
   slug: z.string().min(3, 'Slug is required'),
   description: z.string().min(5, 'Description must be at least 5 characters'),
-  price: z.number().positive('Price must be greater than 0'),
+  price: z.number().positive('Price must be greater than 0').nullable().optional(),
   stockQuantity: z.number().int().refine((quantity) => quantity === 0, 'Record initial stock through Stock Management').optional().default(0),
   minimumStockLevel: z.number().int().min(0).optional().default(5),
   maximumStockLevel: z.number().int().min(0).optional().default(100),
@@ -39,15 +56,45 @@ const validateStockThresholds = <T extends { minimumStockLevel?: number; maximum
     });
   }
 };
+const validateProductPrice = (
+  value: {
+    price?: number | null;
+    productType?: (typeof ALLOWED_PRODUCT_TYPES)[number];
+  },
+  context: z.RefinementCtx
+) => {
+  if (
+    value.productType === 'READY_TO_WEAR' &&
+    (value.price == null || value.price <= 0)
+  ) {
+    context.addIssue({
+      code: 'custom',
+      path: ['price'],
+      message: 'Ready to Wear products must have a price greater than zero',
+    });
+  }
+};
 
-export const createProductSchema = z.object(productFields).superRefine(validateStockThresholds);
-export const updateProductSchema = z.object({
-  ...productFields,
-  stockQuantity: z.number().int().min(0).optional(),
-  minimumStockLevel: z.number().int().min(0).optional(),
-  maximumStockLevel: z.number().int().min(0).optional(),
-  sizes: z.array(sizeEnum).optional(),
-  colors: z.array(colorEnum).optional(),
-  isAvailable: z.boolean().optional(),
-  productType: productTypeEnum.optional(),
-}).partial().superRefine(validateStockThresholds);
+export const createProductSchema = z
+  .object(productFields)
+  .superRefine((value, context) => {
+    validateStockThresholds(value, context);
+    validateProductPrice(value, context);
+  });
+
+export const updateProductSchema = z
+  .object({
+    ...productFields,
+    stockQuantity: z.number().int().min(0).optional(),
+    minimumStockLevel: z.number().int().min(0).optional(),
+    maximumStockLevel: z.number().int().min(0).optional(),
+    sizes: z.array(sizeEnum).optional(),
+    colors: z.array(colorEnum).optional(),
+    isAvailable: z.boolean().optional(),
+    productType: productTypeEnum.optional(),
+  })
+  .partial()
+  .superRefine((value, context) => {
+    validateStockThresholds(value, context);
+    validateProductPrice(value, context);
+  });

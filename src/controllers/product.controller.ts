@@ -79,12 +79,12 @@ export class ProductController extends Controller {
   @SuccessResponse('201', 'Created')
   @Response<StandardErrorResponse>(400, 'Bad Request')
   @Response<StandardErrorResponse>(404, 'Category not found')
-  public async createProduct(
+    public async createProduct(
     @FormField() name: string,
     @FormField() slug: string,
     @FormField() description: string,
-    @FormField() price: number,
     @FormField() categoryId: string,
+    @FormField() price?: string,
     @FormField() stockQuantity?: number,
     @FormField() minimumStockLevel?: number,
     @FormField() maximumStockLevel?: number,
@@ -99,7 +99,7 @@ export class ProductController extends Controller {
       name,
       slug,
       description,
-      price: Number(price),
+      price: parseOptionalNumber(price) ?? null,
       categoryId,
       stockQuantity: stockQuantity !== undefined ? Number(stockQuantity) : 0,
       minimumStockLevel: minimumStockLevel !== undefined ? Number(minimumStockLevel) : 5,
@@ -138,7 +138,11 @@ export class ProductController extends Controller {
     @FormField() imageUrl?: string,
     @UploadedFile() image?: Express.Multer.File
   ): Promise<Product> {
-    const parsedPrice = parseOptionalNumber(price);
+    const parsedPrice = price === undefined
+  ? undefined
+  : price.trim() === ''
+    ? null
+    : parseOptionalNumber(price);
     const parsedStockQuantity = parseOptionalNumber(stockQuantity);
     const parsedMinimumStockLevel = parseOptionalNumber(minimumStockLevel);
     const parsedMaximumStockLevel = parseOptionalNumber(maximumStockLevel);
@@ -155,8 +159,8 @@ export class ProductController extends Controller {
       ...(parsedMaximumStockLevel !== undefined && { maximumStockLevel: parsedMaximumStockLevel }),
       ...(parsedIsAvailable !== undefined && { isAvailable: parsedIsAvailable }),
       ...(parsedProductType && { productType: parsedProductType }),
-      ...(sizes && { sizes: parseArray(sizes) }),
-      ...(colors && { colors: parseArray(colors) }),
+     ...(sizes !== undefined && { sizes: parseArray(sizes) }),
+     ...(colors !== undefined && { colors: parseArray(colors) }),
       ...(cleanOptionalString(imageUrl) && { imageUrl: cleanOptionalString(imageUrl) }),
     };
     updateProductSchema.parse(dto);

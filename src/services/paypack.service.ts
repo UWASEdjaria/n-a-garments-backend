@@ -1,4 +1,4 @@
-import { createRequire } from 'node:module';
+﻿import { createRequire } from 'node:module';
 import { AppError } from '../utils/appError.js';
 
 interface PaypackConfigOptions {
@@ -19,9 +19,22 @@ interface PaypackCashInResponse {
   };
 }
 
+
+interface PaypackTransaction {
+  ref: string;
+  amount: number | string;
+  kind: string;
+  status: string;
+  merchant?: string;
+}
+
+interface PaypackTransactionResponse {
+  data: PaypackTransaction;
+}
 interface PaypackSDKInstance {
   config(options: PaypackConfigOptions): PaypackSDKInstance;
   cashin(params: PaypackCashInParams): Promise<PaypackCashInResponse>;
+  transaction(ref: string): Promise<PaypackTransactionResponse>;
 }
 
 interface PaypackSDKConstructor {
@@ -40,7 +53,7 @@ interface PaypackErrorLike {
 
 export class PaypackRequestError extends AppError {
   constructor(message: string, public readonly definitivelyRejected: boolean) {
-    super(message, 400);
+    super(message, definitivelyRejected ? 400 : 503);
   }
 }
 const nodeRequire = createRequire(process.cwd() + '/package.json');
@@ -120,6 +133,21 @@ export class PaypackService {
       throw new PaypackRequestError(
         paypackError?.response?.data?.message || paypackError?.message || 'Failed to initiate Mobile Money payment prompt via Paypack.',
         typeof status === 'number' && status >= 400 && status < 500
+      );
+    }
+  }
+  public async getTransaction(ref: string): Promise<PaypackTransaction> {
+    if (!ref.trim()) {
+      throw new AppError('Paypack transaction reference is required.', 400);
+    }
+
+    try {
+      const response = await this.paypack.transaction(ref);
+      return response.data;
+    } catch {
+      throw new AppError(
+        'Unable to verify the Paypack transaction right now. Please retry.',
+        503
       );
     }
   }

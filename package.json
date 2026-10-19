@@ -1,64 +1,67 @@
 {
-  "name": "n-a-tailors-backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
- "scripts": {
-    "tsoa:gen": "tsoa spec-and-routes",
-    "dev": "nodemon --watch src -e ts --exec \"pnpm tsoa:gen && tsx src/server.ts\"",
-    "build": "pnpm tsoa:gen && tsc",
-    "start": "node dist/src/server.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.3.0",
-      "onFail": "download"
-    }
-  },
-  "type": "module",
-  "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "@tsoa/runtime": "7.0.0-alpha.0",
-    "axios": "^1.20.0",
-    "bcryptjs": "^3.0.3",
-    "cloudinary": "^2.11.0",
-    "cors": "^2.8.6",
-    "country-to-currency": "^3.0.1",
-    "dotenv": "^18.0.3",
-    "express": "^5.2.1",
-    "helmet": "^8.3.0",
-    "jsonwebtoken": "^9.0.3",
-    "morgan": "^1.12.1",
-    "multer": "^2.4.0",
-    "nodemailer": "^10.0.10",
-    "paypack-js": "^0.2.1",
-    "resend": "^6.28.1",
-    "zod": "^4.6.5"
-  },
-  "devDependencies": {
-    "@types/bcryptjs": "^3.0.0",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/morgan": "^1.9.10",
-    "@types/multer": "^2.2.0",
-    "@types/node": "^26.6.2",
-    "@types/nodemailer": "^8.0.2",
-    "@types/swagger-ui-express": "^4.1.8",
-    "concurrently": "^10.0.5",
-    "nodemon": "^3.1.14",
-    "prisma": "^6.19.3",
-    "swagger-ui-express": "^5.0.1",
-    "ts-node-dev": "^2.0.0",
-    "tsoa": "7.0.0-alpha.0",
-    "tsx": "^4.23.15",
-    "typescript": "^5.9.3"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  }
+    "name":  "n-a-tailors-backend",
+    "version":  "1.0.0",
+    "description":  "",
+    "main":  "index.js",
+    "scripts":  {
+                    "tsoa:gen":  "tsoa spec-and-routes",
+                    "dev":  "nodemon --watch src --ignore src/generated/** -e ts --exec \"pnpm tsoa:gen \u0026\u0026 tsx src/server.ts\"",
+                    "build":  "pnpm exec prisma generate \u0026\u0026 pnpm tsoa:gen \u0026\u0026 tsc",
+                    "start":  "node dist/src/server.js",
+                    "test":  "tsx --test src/services/payment-retry.test.ts"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "devEngines":  {
+                       "packageManager":  {
+                                              "name":  "pnpm",
+                                              "version":  "^11.3.0",
+                                              "onFail":  "download"
+                                          }
+                   },
+    "type":  "module",
+    "dependencies":  {
+                         "@prisma/client":  "^6.19.3",
+                         "@tsoa/runtime":  "7.0.0-alpha.0",
+                         "axios":  "^1.20.0",
+                         "bcryptjs":  "^3.0.3",
+                         "cloudinary":  "^2.11.0",
+                         "cors":  "^2.8.6",
+                         "country-to-currency":  "^3.0.1",
+                         "dotenv":  "^18.0.3",
+                         "express":  "^5.2.1",
+                         "helmet":  "^8.3.0",
+                         "jsonwebtoken":  "^9.0.3",
+                         "morgan":  "^1.12.1",
+                         "multer":  "^2.4.0",
+                         "nodemailer":  "^10.0.10",
+                         "paypack-js":  "^0.2.1",
+                         "resend":  "^6.28.1",
+                         "zod":  "^4.6.5"
+                     },
+    "devDependencies":  {
+                            "@types/bcryptjs":  "^3.0.0",
+                            "@types/cors":  "^2.8.19",
+                            "@types/express":  "^5.0.6",
+                            "@types/jsonwebtoken":  "^9.0.10",
+                            "@types/morgan":  "^1.9.10",
+                            "@types/multer":  "^2.2.0",
+                            "@types/node":  "^26.6.2",
+                            "@types/nodemailer":  "^8.0.2",
+                            "@types/swagger-ui-express":  "^4.1.8",
+                            "concurrently":  "^10.0.5",
+                            "nodemon":  "^3.1.14",
+                            "prisma":  "^6.19.3",
+                            "swagger-ui-express":  "^5.0.1",
+                            "ts-node-dev":  "^2.0.0",
+                            "tsoa":  "7.0.0-alpha.0",
+                            "tsx":  "^4.23.15",
+                            "typescript":  "^5.9.3"
+                        },
+    "prisma":  {
+                   "seed":  "tsx prisma/seed.ts"
+               }
 }
