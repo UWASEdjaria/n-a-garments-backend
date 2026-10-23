@@ -1932,6 +1932,363 @@
 				],
 				"type": "object",
 				"additionalProperties": false
+			},
+			"AdminUser": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string",
+						"nullable": true
+					},
+					"role": {
+						"type": "string",
+						"enum": [
+							"CUSTOMER",
+							"ADMIN"
+						]
+					},
+					"isEmailVerified": {
+						"type": "boolean"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"orderCount": {
+						"type": "number",
+						"format": "double"
+					},
+					"customOrderCount": {
+						"type": "number",
+						"format": "double"
+					},
+					"paidOrderSpend": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"email",
+					"phone",
+					"role",
+					"isEmailVerified",
+					"createdAt",
+					"orderCount",
+					"customOrderCount",
+					"paidOrderSpend"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminUserSummary": {
+				"properties": {
+					"totalUsers": {
+						"type": "number",
+						"format": "double"
+					},
+					"customerCount": {
+						"type": "number",
+						"format": "double"
+					},
+					"adminCount": {
+						"type": "number",
+						"format": "double"
+					},
+					"verifiedCount": {
+						"type": "number",
+						"format": "double"
+					},
+					"unverifiedCount": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"totalUsers",
+					"customerCount",
+					"adminCount",
+					"verifiedCount",
+					"unverifiedCount"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminUserListResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/AdminUser"
+						},
+						"type": "array"
+					},
+					"summary": {
+						"$ref": "#/components/schemas/AdminUserSummary"
+					},
+					"pagination": {
+						"properties": {
+							"totalPages": {
+								"type": "number",
+								"format": "double"
+							},
+							"total": {
+								"type": "number",
+								"format": "double"
+							},
+							"pageSize": {
+								"type": "number",
+								"format": "double"
+							},
+							"page": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"totalPages",
+							"total",
+							"pageSize",
+							"page"
+						],
+						"type": "object"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data",
+					"summary",
+					"pagination"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminCartCustomer": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"phone": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"email",
+					"phone"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminCartProductImage": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"url": {
+						"type": "string"
+					},
+					"isPrimary": {
+						"type": "boolean"
+					},
+					"productId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"url",
+					"isPrimary",
+					"productId"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminCartProduct": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"slug": {
+						"type": "string"
+					},
+					"price": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"productType": {
+						"type": "string"
+					},
+					"isAvailable": {
+						"type": "boolean"
+					},
+					"images": {
+						"items": {
+							"$ref": "#/components/schemas/AdminCartProductImage"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"slug",
+					"price",
+					"productType",
+					"isAvailable",
+					"images"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminCartItem": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"productId": {
+						"type": "string"
+					},
+					"quantity": {
+						"type": "number",
+						"format": "double"
+					},
+					"size": {
+						"type": "string",
+						"nullable": true
+					},
+					"color": {
+						"type": "string",
+						"nullable": true
+					},
+					"product": {
+						"$ref": "#/components/schemas/AdminCartProduct"
+					},
+					"lineTotal": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					}
+				},
+				"required": [
+					"id",
+					"productId",
+					"quantity",
+					"size",
+					"color",
+					"product",
+					"lineTotal"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminCart": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"customer": {
+						"$ref": "#/components/schemas/AdminCartCustomer"
+					},
+					"items": {
+						"items": {
+							"$ref": "#/components/schemas/AdminCartItem"
+						},
+						"type": "array"
+					},
+					"itemCount": {
+						"type": "number",
+						"format": "double"
+					},
+					"totalQuantity": {
+						"type": "number",
+						"format": "double"
+					},
+					"totalAmount": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"customer",
+					"items",
+					"itemCount",
+					"totalQuantity",
+					"totalAmount",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminCartListResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/AdminCart"
+						},
+						"type": "array"
+					},
+					"total": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data",
+					"total"
+				],
+				"type": "object",
+				"additionalProperties": false
 			}
 		},
 		"securitySchemes": {
@@ -4691,6 +5048,105 @@
 						}
 					}
 				]
+			}
+		},
+		"/admin/users": {
+			"get": {
+				"operationId": "GetUsers",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AdminUserListResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Admin Users"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "search",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "role",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "verified",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "pageSize",
+						"required": false,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					}
+				]
+			}
+		},
+		"/admin/carts": {
+			"get": {
+				"operationId": "GetAllCarts",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AdminCartListResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Admin Carts"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": []
 			}
 		}
 	},
