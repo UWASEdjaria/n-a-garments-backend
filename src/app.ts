@@ -1,4 +1,4 @@
-﻿import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -10,7 +10,21 @@ import { errorHandler } from './middleware/error.middleware.js';
 const app: Application = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: [process.env.FRONTEND_URL, 'http://localhost:3000'].filter((origin): origin is string => Boolean(origin)), }));
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://nagarments.com',
+  'https://www.nagarments.com',
+  'https://na-garments-frontend.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter((origin): origin is string => Boolean(origin));
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
 app.use(express.json({
   verify: (req, _res, buf) => {
     (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
