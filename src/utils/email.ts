@@ -1,14 +1,44 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: Number(process.env.EMAIL_PORT) || 465,
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+type EmailMessage = {
+  from: string;
+  to: string | string[] | undefined;
+  subject: string;
+  html: string;
+  replyTo?: string;
+};
+
+const sendEmail = async (message: EmailMessage): Promise<void> => {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured.');
+  }
+
+  const recipient = message.to;
+
+  if (
+    !recipient ||
+    (Array.isArray(recipient) && recipient.length === 0)
+  ) {
+    throw new Error('Email recipient is not configured.');
+  }
+
+  const resend = new Resend(apiKey);
+
+  const { error } = await resend.emails.send({
+    from: message.from,
+    to: recipient,
+    subject: message.subject,
+    html: message.html,
+    ...(message.replyTo ? { replyTo: message.replyTo } : {}),
+  });
+
+  if (error) {
+    console.error('Resend email send failed:', error.message);
+    throw new Error('Email provider failed to send the message.');
+  }
+};
 
 export const sendPasswordResetEmail = async (
   to: string,
@@ -16,10 +46,8 @@ export const sendPasswordResetEmail = async (
   resetUrl: string
 ): Promise<void> => {
   try {
-    await transporter.sendMail({
-      from:
-        process.env.EMAIL_FROM ||
-        `"nagarments" <${process.env.EMAIL_USER}>`,
+    await sendEmail({
+      from: process.env.EMAIL_FROM || 'nagarmentss <nagarmentss@nagarments.com>',
       to,
       subject: 'Reset Your Password — nagarments',
       html: `
@@ -65,10 +93,8 @@ export const sendCustomOrderEmail = async (
   referenceImageUrls: string[]
 ): Promise<void> => {
   try {
-    await transporter.sendMail({
-      from:
-        process.env.EMAIL_FROM ||
-        `"nagarments" <${process.env.EMAIL_USER}>`,
+    await sendEmail({
+      from: process.env.EMAIL_FROM || 'nagarmentss <nagarmentss@nagarments.com>',
       to: process.env.EMAIL_USER,
       replyTo: email,
       subject: `New Custom Order Request — ${name}`,
@@ -175,22 +201,20 @@ export const sendVerificationEmail = async (
 ): Promise<void> => {
   
   try {
-    await transporter.sendMail({
-      from:
-        process.env.EMAIL_FROM ||
-        `"NA-GARMENTS" <${process.env.EMAIL_USER}>`,
+    await sendEmail({
+      from: process.env.EMAIL_FROM || 'nagarmentss <nagarmentss@nagarments.com>',
       to,
-      subject: 'Verify Your Email — NA-GARMENTS',
+      subject: 'Verify Your Email — Nagarmentss',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111111;">
           <div style="background: #123B5D; padding: 24px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0;">NA-GARMENTS</h1>
+            <h1 style="color: #ffffff; margin: 0;">Nagarmentss</h1>
           </div>
 
           <div style="padding: 24px;">
             <h2>Hello, ${name}</h2>
 
-            <p>Thank you for creating your NA-GARMENTS account.</p>
+            <p>Thank you for creating your Nagarmentss account.</p>
             <p>Please verify your email address by clicking the button below.</p>
 
             <a
@@ -203,7 +227,7 @@ export const sendVerificationEmail = async (
             <p>This link expires in 30 minutes.</p>
             <p>If you did not create this account, you can ignore this email.</p>
 
-            <p>NA-GARMENTS Team</p>
+            <p>Nagarmentss Team</p>
           </div>
         </div>
       `,
