@@ -20,7 +20,10 @@ import {
   CustomOrderResponse,
   CustomOrderData,
   UpdateCustomOrderStatusRequest,
+  ProposeQuoteRequest,
+  AcceptQuoteRequest,
 } from '../interfaces/custom-order.interface.js';
+import { AppError } from '../utils/appError.js';
 import { getUser } from '../utils/getUser.js';
 
 const customOrderService = new CustomOrderService();
@@ -75,7 +78,7 @@ export class CustomOrderController extends Controller {
     );
   }
 
-  /** Get one custom order request — own request or Admin */
+  /** Get one custom order request â€” own request or Admin */
   @Get('{id}')
   @Security('jwt')
   @SuccessResponse('200', 'Success')
@@ -94,7 +97,7 @@ export class CustomOrderController extends Controller {
     );
   }
 
-  /** Get all custom order requests — Admin only */
+  /** Get all custom order requests â€” Admin only */
   @Get()
   @Security('jwt', ['ADMIN'])
   @SuccessResponse('200', 'Success')
@@ -102,7 +105,82 @@ export class CustomOrderController extends Controller {
     return customOrderService.getAllCustomOrders();
   }
 
-  /** Update custom order status — Admin only */
+  /** Propose or resend a quote - Admin only */
+  @Patch('{id}/quote')
+  @Security('jwt', ['ADMIN'])
+  @SuccessResponse('200', 'Quote proposed')
+  @Response(400, 'Invalid quote')
+  @Response(404, 'Custom order not found')
+  public async proposeCustomOrderQuote(
+    @Path() id: string,
+    @Body() requestBody: ProposeQuoteRequest
+  ): Promise<CustomOrderData> {
+    return customOrderService.proposeQuote(id, requestBody);
+  }
+
+  /** View a quote through its secure customer link */
+  @Get('quote/{token}')
+  @SuccessResponse('200', 'Quote retrieved')
+  @Response(404, 'Quote link invalid or expired')
+  public async getCustomerQuoteByToken(
+    @Path() token: string
+  ): Promise<{
+    quoteReference: string | null;
+    garmentType: string;
+    quantity: number;
+    quoteTotal: number | null;
+    advanceAmount: number | null;
+    deliveryFee: number | null;
+    additionalCharges: number | null;
+    balanceAmount: number | null;
+    estimatedCompletionAt: Date | null;
+    paymentTerms: string | null;
+    quoteStatus: string;
+  }> {
+    const quote = await customOrderService.getQuoteByToken(token);
+
+    return {
+      quoteReference: quote.quoteReference,
+      garmentType: quote.garmentType,
+      quantity: quote.quantity,
+      quoteTotal: quote.quoteTotal,
+      advanceAmount: quote.advanceAmount,
+      deliveryFee: quote.deliveryFee,
+      additionalCharges: quote.additionalCharges,
+      balanceAmount: quote.balanceAmount,
+      estimatedCompletionAt: quote.estimatedCompletionAt,
+      paymentTerms: quote.paymentTerms,
+      quoteStatus: quote.quoteStatus,
+    };
+  }
+
+  /** Accept or decline a quote using its one-time secure token */
+  @Post('quote/{token}/decision')
+  @SuccessResponse('200', 'Quote decision recorded')
+  @Response(400, 'Invalid decision')
+  @Response(410, 'Quote no longer available')
+  public async decideCustomerQuote(
+    @Path() token: string,
+    @Body() requestBody: AcceptQuoteRequest
+  ): Promise<{
+    quoteReference: string | null;
+    quoteStatus: string;
+  }> {
+    if (typeof requestBody?.accepted !== 'boolean') {
+      throw new AppError('The accepted field must be true or false.', 400);
+    }
+
+    const quote = await customOrderService.decideQuoteByToken(
+      token,
+      requestBody.accepted
+    );
+
+    return {
+      quoteReference: quote.quoteReference,
+      quoteStatus: quote.quoteStatus,
+    };
+  }
+  /** Update custom order status â€” Admin only */
   @Patch('{id}/status')
   @Security('jwt', ['ADMIN'])
   @SuccessResponse('200', 'Success')
