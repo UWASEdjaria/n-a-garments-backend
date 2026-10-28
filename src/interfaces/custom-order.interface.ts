@@ -19,6 +19,10 @@ export interface CreateCustomOrderRequest {
 export interface ProposeQuoteRequest {
   quoteTotal: number;
   advanceAmount: number;
+  deliveryFee: number;
+  additionalCharges?: number;
+  estimatedCompletionAt: string;
+  paymentTerms: string;
   adminNotes?: string;
 }
 
@@ -44,6 +48,11 @@ export interface CustomOrderData {
   adminNotes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  quoteReference: string | null;
+  deliveryFee: number | null;
+  additionalCharges: number | null;
+  estimatedCompletionAt: Date | null;
+  paymentTerms: string | null;
   quoteStatus: QuoteStatus;
   quoteTotal: number | null;
   advanceAmount: number | null;

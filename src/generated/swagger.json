@@ -1064,6 +1064,29 @@
 						"type": "string",
 						"format": "date-time"
 					},
+					"quoteReference": {
+						"type": "string",
+						"nullable": true
+					},
+					"deliveryFee": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"additionalCharges": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"estimatedCompletionAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"paymentTerms": {
+						"type": "string",
+						"nullable": true
+					},
 					"quoteStatus": {
 						"$ref": "#/components/schemas/QuoteStatus"
 					},
@@ -1128,6 +1151,11 @@
 					"adminNotes",
 					"createdAt",
 					"updatedAt",
+					"quoteReference",
+					"deliveryFee",
+					"additionalCharges",
+					"estimatedCompletionAt",
+					"paymentTerms",
 					"quoteStatus",
 					"quoteTotal",
 					"advanceAmount",
@@ -1206,6 +1234,56 @@
 					"garmentType",
 					"quantity",
 					"description"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ProposeQuoteRequest": {
+				"properties": {
+					"quoteTotal": {
+						"type": "number",
+						"format": "double"
+					},
+					"advanceAmount": {
+						"type": "number",
+						"format": "double"
+					},
+					"deliveryFee": {
+						"type": "number",
+						"format": "double"
+					},
+					"additionalCharges": {
+						"type": "number",
+						"format": "double"
+					},
+					"estimatedCompletionAt": {
+						"type": "string"
+					},
+					"paymentTerms": {
+						"type": "string"
+					},
+					"adminNotes": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"quoteTotal",
+					"advanceAmount",
+					"deliveryFee",
+					"estimatedCompletionAt",
+					"paymentTerms"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AcceptQuoteRequest": {
+				"properties": {
+					"accepted": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"accepted"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -3878,7 +3956,7 @@
 						}
 					}
 				},
-				"description": "Get all custom order requests — Admin only",
+				"description": "Get all custom order requests â€” Admin only",
 				"tags": [
 					"Custom Orders"
 				],
@@ -3943,7 +4021,7 @@
 						"description": "Not Found"
 					}
 				},
-				"description": "Get one custom order request — own request or Admin",
+				"description": "Get one custom order request â€” own request or Admin",
 				"tags": [
 					"Custom Orders"
 				],
@@ -3964,6 +4042,219 @@
 				]
 			}
 		},
+		"/custom-orders/{id}/quote": {
+			"patch": {
+				"operationId": "ProposeCustomOrderQuote",
+				"responses": {
+					"200": {
+						"description": "Quote proposed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CustomOrderData"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid quote"
+					},
+					"404": {
+						"description": "Custom order not found"
+					}
+				},
+				"description": "Propose or resend a quote - Admin only",
+				"tags": [
+					"Custom Orders"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ProposeQuoteRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/custom-orders/quote/{token}": {
+			"get": {
+				"operationId": "GetCustomerQuoteByToken",
+				"responses": {
+					"200": {
+						"description": "Quote retrieved",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"quoteStatus": {
+											"type": "string"
+										},
+										"paymentTerms": {
+											"type": "string",
+											"nullable": true
+										},
+										"estimatedCompletionAt": {
+											"type": "string",
+											"format": "date-time",
+											"nullable": true
+										},
+										"balanceAmount": {
+											"type": "number",
+											"format": "double",
+											"nullable": true
+										},
+										"additionalCharges": {
+											"type": "number",
+											"format": "double",
+											"nullable": true
+										},
+										"deliveryFee": {
+											"type": "number",
+											"format": "double",
+											"nullable": true
+										},
+										"advanceAmount": {
+											"type": "number",
+											"format": "double",
+											"nullable": true
+										},
+										"quoteTotal": {
+											"type": "number",
+											"format": "double",
+											"nullable": true
+										},
+										"quantity": {
+											"type": "number",
+											"format": "double"
+										},
+										"garmentType": {
+											"type": "string"
+										},
+										"quoteReference": {
+											"type": "string",
+											"nullable": true
+										}
+									},
+									"required": [
+										"quoteStatus",
+										"paymentTerms",
+										"estimatedCompletionAt",
+										"balanceAmount",
+										"additionalCharges",
+										"deliveryFee",
+										"advanceAmount",
+										"quoteTotal",
+										"quantity",
+										"garmentType",
+										"quoteReference"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Quote link invalid or expired"
+					}
+				},
+				"description": "View a quote through its secure customer link",
+				"tags": [
+					"Custom Orders"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "token",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/custom-orders/quote/{token}/decision": {
+			"post": {
+				"operationId": "DecideCustomerQuote",
+				"responses": {
+					"200": {
+						"description": "Quote decision recorded",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"quoteStatus": {
+											"type": "string"
+										},
+										"quoteReference": {
+											"type": "string",
+											"nullable": true
+										}
+									},
+									"required": [
+										"quoteStatus",
+										"quoteReference"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid decision"
+					},
+					"410": {
+						"description": "Quote no longer available"
+					}
+				},
+				"description": "Accept or decline a quote using its one-time secure token",
+				"tags": [
+					"Custom Orders"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "token",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AcceptQuoteRequest"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/custom-orders/{id}/status": {
 			"patch": {
 				"operationId": "UpdateCustomOrderStatus",
@@ -3982,7 +4273,7 @@
 						"description": "Not Found"
 					}
 				},
-				"description": "Update custom order status — Admin only",
+				"description": "Update custom order status â€” Admin only",
 				"tags": [
 					"Custom Orders"
 				],

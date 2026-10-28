@@ -154,6 +154,14 @@ model CustomOrder {
   product            Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   // Quote fields
+  quoteReference             String?   @unique
+  deliveryFee                Decimal?  @db.Decimal(10, 2)
+  additionalCharges          Decimal?  @db.Decimal(10, 2)
+  estimatedCompletionAt      DateTime?
+  paymentTerms               String?
+  quoteAccessTokenHash       String?   @unique
+  quoteAccessTokenExpiresAt  DateTime?
+
   quoteStatus        QuoteStatus        @default(PENDING)
   quoteTotal         Decimal?           @db.Decimal(10, 2)
   advanceAmount      Decimal?           @db.Decimal(10, 2)

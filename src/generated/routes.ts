@@ -434,6 +434,11 @@ const models: TsoaRoute.Models = {
             "adminNotes": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "createdAt": {"dataType":"datetime","required":true},
             "updatedAt": {"dataType":"datetime","required":true},
+            "quoteReference": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "deliveryFee": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "additionalCharges": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "estimatedCompletionAt": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}],"required":true},
+            "paymentTerms": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "quoteStatus": {"ref":"QuoteStatus","required":true},
             "quoteTotal": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
             "advanceAmount": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
@@ -471,6 +476,28 @@ const models: TsoaRoute.Models = {
             "additionalReqs": {"dataType":"string"},
             "referenceImageUrls": {"dataType":"array","array":{"dataType":"string"}},
             "productId": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProposeQuoteRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "quoteTotal": {"dataType":"double","required":true},
+            "advanceAmount": {"dataType":"double","required":true},
+            "deliveryFee": {"dataType":"double","required":true},
+            "additionalCharges": {"dataType":"double"},
+            "estimatedCompletionAt": {"dataType":"string","required":true},
+            "paymentTerms": {"dataType":"string","required":true},
+            "adminNotes": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AcceptQuoteRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "accepted": {"dataType":"boolean","required":true},
         },
         "additionalProperties": false,
     },
@@ -2025,6 +2052,99 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getAllCustomOrders',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCustomOrderController_proposeCustomOrderQuote: Record<string, TsoaRoute.ParameterSchema> = {
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+                requestBody: {"in":"body","name":"requestBody","required":true,"ref":"ProposeQuoteRequest"},
+        };
+        app.patch('/custom-orders/:id/quote',
+            authenticateMiddleware([{"jwt":["ADMIN"]}]),
+            ...(fetchMiddlewares<RequestHandler>(CustomOrderController)),
+            ...(fetchMiddlewares<RequestHandler>(CustomOrderController.prototype.proposeCustomOrderQuote)),
+
+            async function CustomOrderController_proposeCustomOrderQuote(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCustomOrderController_proposeCustomOrderQuote, request, response });
+
+                const controller = new CustomOrderController();
+
+              await templateService.apiHandler({
+                methodName: 'proposeCustomOrderQuote',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCustomOrderController_getCustomerQuoteByToken: Record<string, TsoaRoute.ParameterSchema> = {
+                token: {"in":"path","name":"token","required":true,"dataType":"string"},
+        };
+        app.get('/custom-orders/quote/:token',
+            ...(fetchMiddlewares<RequestHandler>(CustomOrderController)),
+            ...(fetchMiddlewares<RequestHandler>(CustomOrderController.prototype.getCustomerQuoteByToken)),
+
+            async function CustomOrderController_getCustomerQuoteByToken(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCustomOrderController_getCustomerQuoteByToken, request, response });
+
+                const controller = new CustomOrderController();
+
+              await templateService.apiHandler({
+                methodName: 'getCustomerQuoteByToken',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCustomOrderController_decideCustomerQuote: Record<string, TsoaRoute.ParameterSchema> = {
+                token: {"in":"path","name":"token","required":true,"dataType":"string"},
+                requestBody: {"in":"body","name":"requestBody","required":true,"ref":"AcceptQuoteRequest"},
+        };
+        app.post('/custom-orders/quote/:token/decision',
+            ...(fetchMiddlewares<RequestHandler>(CustomOrderController)),
+            ...(fetchMiddlewares<RequestHandler>(CustomOrderController.prototype.decideCustomerQuote)),
+
+            async function CustomOrderController_decideCustomerQuote(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCustomOrderController_decideCustomerQuote, request, response });
+
+                const controller = new CustomOrderController();
+
+              await templateService.apiHandler({
+                methodName: 'decideCustomerQuote',
                 controller,
                 response,
                 next,

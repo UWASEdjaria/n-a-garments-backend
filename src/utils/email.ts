@@ -237,3 +237,99 @@ export const sendVerificationEmail = async (
     throw new Error('Could not send verification email.');
   }
 };
+
+
+export interface CustomOrderQuoteEmailData {
+  name: string;
+  email: string;
+  quoteReference: string;
+  garmentType: string;
+  quantity: number;
+  quoteTotal: number;
+  advanceAmount: number;
+  deliveryFee: number;
+  additionalCharges: number;
+  estimatedCompletionAt: Date;
+  paymentTerms: string;
+  quoteUrl: string;
+}
+
+const escapeQuoteHtml = (value: string): string =>
+  value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+
+    return entities[character];
+  });
+
+export const sendCustomOrderQuoteEmail = async (
+  quote: CustomOrderQuoteEmailData
+): Promise<void> => {
+  const frontendUrl = (
+    process.env.FRONTEND_URL || 'https://nagarments.com'
+  ).replace(/\/+$/, '');
+
+  const safeName = escapeQuoteHtml(quote.name);
+  const safeReference = escapeQuoteHtml(quote.quoteReference);
+  const safeGarmentType = escapeQuoteHtml(quote.garmentType);
+  const safePaymentTerms = escapeQuoteHtml(quote.paymentTerms);
+  const safeQuoteUrl = escapeQuoteHtml(quote.quoteUrl);
+  const completionDate = quote.estimatedCompletionAt.toLocaleDateString(
+    'en-GB',
+    { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }
+  );
+
+  const money = (amount: number): string =>
+    `RWF ${amount.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
+
+  try {
+    await sendEmail({
+      from: process.env.EMAIL_FROM || 'nagarmentss <nagarmentss@nagarments.com>',
+      to: quote.email,
+      subject: `Your Nagarments quote ${safeReference}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto; color: #111111;">
+          <div style="background: #123B5D; padding: 24px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0;">nagarments</h1>
+            <p style="color: #ffffff; margin-bottom: 0;">Your custom clothing quote</p>
+          </div>
+          <div style="padding: 24px;">
+            <p>Hello ${safeName},</p>
+            <p>We've prepared a quote for your custom clothing request.</p>
+            <p><strong>Quote reference:</strong> ${safeReference}</p>
+            <p><strong>Garment:</strong> ${safeGarmentType}</p>
+            <p><strong>Quantity:</strong> ${quote.quantity}</p>
+            <hr style="border: 0; border-top: 1px solid #dddddd;" />
+            <p><strong>Total quote:</strong> ${money(quote.quoteTotal)}</p>
+            <p><strong>Advance requested:</strong> ${money(quote.advanceAmount)}</p>
+            <p><strong>Delivery fee:</strong> ${money(quote.deliveryFee)}</p>
+            <p><strong>Additional charges:</strong> ${money(quote.additionalCharges)}</p>
+            <p><strong>Estimated completion:</strong> ${completionDate}</p>
+            <p><strong>Payment terms:</strong><br />${safePaymentTerms}</p>
+            <p>Please open your secure quote link to review the details and accept or decline.</p>
+            <p style="text-align: center; margin: 28px 0;">
+              <a href="${safeQuoteUrl}" style="display: inline-block; padding: 12px 24px; background: #123B5D; color: #ffffff; text-decoration: none; border-radius: 4px;">
+                Review Your Quote
+              </a>
+            </p>
+            <p style="font-size: 13px; color: #555555;">
+              This quote is priced in Rwandan francs (RWF). Accepting a quote does not itself confirm payment.
+            </p>
+            <p>Thank you,<br />Nagarments Team</p>
+          </div>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Failed to send custom order quote email:', error);
+    throw new Error('Could not send custom order quote email.');
+  }
+};
