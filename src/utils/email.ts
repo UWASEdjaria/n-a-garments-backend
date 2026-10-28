@@ -333,3 +333,53 @@ export const sendCustomOrderQuoteEmail = async (
     throw new Error('Could not send custom order quote email.');
   }
 };
+
+
+export interface CustomOrderQuoteDecisionEmailData {
+  name: string;
+  email: string;
+  quoteReference: string;
+  garmentType: string;
+  quoteStatus: 'ACCEPTED' | 'DECLINED';
+  decisionAt: Date;
+}
+
+export const sendCustomOrderQuoteDecisionEmail = async (
+  decision: CustomOrderQuoteDecisionEmailData
+): Promise<void> => {
+  const safeName = escapeQuoteHtml(decision.name);
+  const safeEmail = escapeQuoteHtml(decision.email);
+  const safeReference = escapeQuoteHtml(decision.quoteReference);
+  const safeGarmentType = escapeQuoteHtml(decision.garmentType);
+  const label = decision.quoteStatus === 'ACCEPTED' ? 'accepted' : 'declined';
+  const date = decision.decisionAt.toLocaleString('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'UTC',
+  });
+
+  await sendEmail({
+    from: process.env.EMAIL_FROM || 'nagarmentss <nagarmentss@nagarments.com>',
+    to: process.env.EMAIL_USER,
+    replyTo: decision.email,
+    subject: `Quote ${label}: ${safeReference}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#111">
+        <div style="background:#123B5D;padding:24px;text-align:center;color:white">
+          <h1 style="margin:0">nagarments</h1>
+          <p>Customer quote decision</p>
+        </div>
+        <div style="padding:24px">
+          <h2>The customer ${label} the quote.</h2>
+          <p><strong>Quote reference:</strong> ${safeReference}</p>
+          <p><strong>Customer:</strong> ${safeName}</p>
+          <p><strong>Email:</strong> ${safeEmail}</p>
+          <p><strong>Garment:</strong> ${safeGarmentType}</p>
+          <p><strong>Decision:</strong> ${label.toUpperCase()}</p>
+          <p><strong>Recorded at (UTC):</strong> ${date}</p>
+          <p>Review the custom order in the Nagarments admin dashboard.</p>
+        </div>
+      </div>
+    `,
+  });
+};
