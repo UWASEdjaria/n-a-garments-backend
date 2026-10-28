@@ -334,6 +334,23 @@ export class CustomOrderService {
 
     // A quote decision is not payment confirmation.
     // Do not change paymentStatus or call Paypack.
+    try {
+      const { sendCustomOrderQuoteDecisionEmail } = await import('../utils/email.js');
+      const decisionAt = accepted ? updated.acceptedAt : updated.declinedAt;
+
+      if (decisionAt && updated.quoteReference) {
+        await sendCustomOrderQuoteDecisionEmail({
+          name: updated.name,
+          email: updated.email,
+          quoteReference: updated.quoteReference,
+          garmentType: updated.garmentType,
+          quoteStatus: accepted ? 'ACCEPTED' : 'DECLINED',
+          decisionAt,
+        });
+      }
+    } catch (error) {
+      console.error('Quote decision saved, but admin email notification failed:', error);
+    }
     return this.formatCustomOrder(updated);
   }
   async updateCustomOrderStatus(
