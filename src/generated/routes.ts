@@ -223,7 +223,7 @@ const models: TsoaRoute.Models = {
         "properties": {
             "success": {"dataType":"boolean","required":true},
             "message": {"dataType":"string","required":true},
-            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"attempts":{"dataType":"array","array":{"dataType":"refObject","ref":"PaymentAttemptSummary"}},"retryAvailable":{"dataType":"boolean"},"ref":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},"status":{"ref":"PaymentStatusType","required":true},"paymentMethod":{"ref":"PaymentMethodType","required":true},"amount":{"dataType":"double","required":true},"orderId":{"dataType":"string","required":true},"paymentId":{"dataType":"string","required":true}},"required":true},
+            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"attempts":{"dataType":"array","array":{"dataType":"refObject","ref":"PaymentAttemptSummary"}},"retryAvailable":{"dataType":"boolean"},"ref":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},"status":{"ref":"PaymentStatusType","required":true},"paymentMethod":{"ref":"PaymentMethodType","required":true},"amount":{"dataType":"double","required":true},"orderId":{"dataType":"string","required":true},"checkoutUrl":{"dataType":"string"},"paymentId":{"dataType":"string","required":true}},"required":true},
         },
         "additionalProperties": false,
     },
@@ -1501,25 +1501,25 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsPaymentController_handlePaypackWebhook: Record<string, TsoaRoute.ParameterSchema> = {
+        const argsPaymentController_handleKpayWebhook: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/payments/webhook/paypack',
+        app.post('/payments/webhook/kpay',
             ...(fetchMiddlewares<RequestHandler>(PaymentController)),
-            ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.handlePaypackWebhook)),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.handleKpayWebhook)),
 
-            async function PaymentController_handlePaypackWebhook(request: ExRequest, response: ExResponse, next: any) {
+            async function PaymentController_handleKpayWebhook(request: ExRequest, response: ExResponse, next: any) {
 
             // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
             let validatedArgs: any[] = [];
             try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsPaymentController_handlePaypackWebhook, request, response });
+                validatedArgs = templateService.getValidatedArgs({ args: argsPaymentController_handleKpayWebhook, request, response });
 
                 const controller = new PaymentController();
 
               await templateService.apiHandler({
-                methodName: 'handlePaypackWebhook',
+                methodName: 'handleKpayWebhook',
                 controller,
                 response,
                 next,

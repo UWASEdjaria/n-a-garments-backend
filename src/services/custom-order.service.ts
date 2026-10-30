@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+﻿import { PrismaClient } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
 import {
   CreateCustomOrderRequest,
@@ -333,7 +333,7 @@ export class CustomOrderService {
     }
 
     // A quote decision is not payment confirmation.
-    // Do not change paymentStatus or call Paypack.
+    // Do not change paymentStatus in this custom-order flow.
     try {
       const { sendCustomOrderQuoteDecisionEmail } = await import('../utils/email.js');
       const decisionAt = accepted ? updated.acceptedAt : updated.declinedAt;
@@ -378,3 +378,4 @@ export class CustomOrderService {
     return this.formatCustomOrder(updatedOrder);
   }
 }
+

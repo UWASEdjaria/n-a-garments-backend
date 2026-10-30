@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Get,
@@ -14,7 +14,7 @@ import {
   Tags,
 } from 'tsoa';
 import express from 'express';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+
 
 import { PaymentService } from '../services/payment.service.js';
 import {
@@ -30,6 +30,7 @@ import {
 } from '../interfaces/payment.interface.js';
 import { getUser } from '../utils/getUser.js';
 import { AppError } from '../utils/appError.js';
+
 
 @Route('payments')
 @Tags('Payments')
@@ -63,58 +64,34 @@ export class PaymentController extends Controller {
     return this.paymentService.initiateGuestPayment(validatedData);
   }
 
-  @Post('/webhook/paypack')
-  public async handlePaypackWebhook(
+  @Post('/webhook/kpay')
+  public async handleKpayWebhook(
     @Request() request: express.Request
-  ): Promise<{ success: boolean }> {
+  ): Promise<{ refid: string; reply: string }> {
     const body = request.body as {
-      data?: { ref?: string; status?: string };
-      ref?: string;
-      status?: string;
+      tid?: unknown;
+      refid?: unknown;
+      statusid?: unknown;
     };
-    const secret = process.env.PAYPACK_WEBHOOK_SIGN_KEY;
 
-    if (!secret) {
-      throw new AppError('Paypack webhook verification is not configured.', 503);
+    const refid =
+      typeof body.refid === 'string' ? body.refid.trim() : '';
+
+    const statusid =
+      typeof body.statusid === 'string'
+        ? body.statusid.trim()
+        : typeof body.statusid === 'number' &&
+            Number.isInteger(body.statusid)
+          ? String(body.statusid).padStart(2, '0')
+          : '';
+
+    if (!refid || !['01', '02', '03'].includes(statusid)) {
+      throw new AppError('Invalid K-Pay callback payload.', 400);
     }
 
-    const rawBody = (
-      request as express.Request & { rawBody?: Buffer }
-    ).rawBody;
-    const signature = request.header('x-paypack-signature');
+    await this.paymentService.handleKpayWebhook({ refid, statusid });
 
-    if (!rawBody || !signature) {
-      throw new AppError('Missing Paypack webhook signature or request body.', 401);
-    }
-
-    const expectedSignature = createHmac('sha256', secret)
-      .update(rawBody)
-      .digest();
-
-    const receivedSignature = Buffer.from(signature, 'base64');
-
-    if (
-      receivedSignature.length !== expectedSignature.length ||
-      !timingSafeEqual(receivedSignature, expectedSignature)
-    ) {
-      throw new AppError('Invalid Paypack webhook signature.', 401);
-    }
-
-    const ref = body.data?.ref || body.ref;
-    const status = body.data?.status || body.status;
-
-    if (
-      typeof ref !== 'string' ||
-      !ref.trim() ||
-      typeof status !== 'string' ||
-      !status.trim()
-    ) {
-      throw new AppError('Invalid Paypack webhook payload.', 400);
-    }
-
-    await this.paymentService.handlePaypackWebhook({ ref, status });
-
-    return { success: true };
+    return { refid, reply: 'OK' };
   }
   @Get('/order/{orderId}')
   @Security('jwt', ['CUSTOMER'])
@@ -150,4 +127,6 @@ export class PaymentController extends Controller {
     return this.paymentService.updatePaymentStatus(id, validatedData);
   }
 }
+
+
 

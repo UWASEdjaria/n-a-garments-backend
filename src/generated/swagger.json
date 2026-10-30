@@ -507,6 +507,9 @@
 							"orderId": {
 								"type": "string"
 							},
+							"checkoutUrl": {
+								"type": "string"
+							},
 							"paymentId": {
 								"type": "string"
 							}
@@ -3312,9 +3315,9 @@
 				}
 			}
 		},
-		"/payments/webhook/paypack": {
+		"/payments/webhook/kpay": {
 			"post": {
-				"operationId": "HandlePaypackWebhook",
+				"operationId": "HandleKpayWebhook",
 				"responses": {
 					"200": {
 						"description": "Ok",
@@ -3322,12 +3325,16 @@
 							"application/json": {
 								"schema": {
 									"properties": {
-										"success": {
-											"type": "boolean"
+										"reply": {
+											"type": "string"
+										},
+										"refid": {
+											"type": "string"
 										}
 									},
 									"required": [
-										"success"
+										"reply",
+										"refid"
 									],
 									"type": "object"
 								}
