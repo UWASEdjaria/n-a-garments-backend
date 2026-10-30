@@ -1,9 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { WishlistResponse } from '../interfaces/wishlist.interface.js';
 import { AppError } from '../utils/appError.js';
-
-const prisma = new PrismaClient();
-
 
 export class WishlistService {
 

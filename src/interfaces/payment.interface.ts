@@ -1,6 +1,7 @@
-﻿
+
 export type PaymentStatusType = 'PENDING' | 'PAID' | 'SUCCESSFUL' | 'FAILED' | 'CANCELLED';
 export type PaymentMethodType = 'MOMO' | 'CARD' | 'CASH_ON_DELIVERY';
+export type PaymentProviderType = 'PAYPACK' | 'KPAY';
 
 
 export interface InitiatePaymentDTO {
@@ -27,6 +28,7 @@ export interface PaymentResponse {
     orderId: string;
     amount: number;
     paymentMethod: PaymentMethodType;
+    provider?: PaymentProviderType | null;
     status: PaymentStatusType;
     ref?: string | null;
     retryAvailable?: boolean;
@@ -38,6 +40,7 @@ export interface PaymentAttemptSummary {
   paymentId: string;
   amount: number;
   paymentMethod: PaymentMethodType;
+  provider?: PaymentProviderType | null;
   status: PaymentStatusType;
   ref: string;
   createdAt: string;

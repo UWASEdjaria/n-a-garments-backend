@@ -8,7 +8,7 @@
         "dev": "nodemon --watch src --ignore src/generated/** -e ts --exec \"pnpm tsoa:gen && tsx src/server.ts\"",
         "build": "pnpm exec prisma generate && pnpm tsoa:gen && tsc",
         "start": "node dist/src/server.js",
-        "test": "tsx --test src/services/payment-retry.test.ts"
+        "test": "tsx --test src/services/payment-retry.test.ts src/services/paypack.service.test.ts"
     },
     "keywords": [],
     "author": "",

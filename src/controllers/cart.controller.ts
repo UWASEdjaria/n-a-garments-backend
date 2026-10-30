@@ -27,6 +27,16 @@ export class CartController extends Controller {
     return cartService.addItem(getUser(request).userId, requestBody);
   }
 
+  /** Merge guest cart items into the authenticated customer's cart */
+  @Post('merge')
+  @SuccessResponse('200', 'Guest cart merged')
+  @Response(400, 'Invalid cart items')
+  public async mergeItems(
+    @Request() request: express.Request,
+    @Body() requestBody: AddCartItemRequest[]
+  ): Promise<CartResponse> {
+    return cartService.mergeItems(getUser(request).userId, requestBody);
+  }
   /** Update quantity of a cart item */
   @Put('items/{itemId}')
   @SuccessResponse('200', 'Success')

@@ -1,4 +1,4 @@
-﻿import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { createHash, randomBytes } from 'node:crypto';
 import {
   CreateCustomOrderRequest,
@@ -11,7 +11,6 @@ import { sendCustomOrderEmail } from '../utils/email.js';
 import { NotificationService } from './notification.service.js';
 
 
-const prisma = new PrismaClient();
 const notificationService = new NotificationService();
 
 export class CustomOrderService {

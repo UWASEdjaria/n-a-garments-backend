@@ -1,9 +1,9 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
+import { Prisma } from '@prisma/client';
 import { AddCartItemRequest, UpdateCartItemRequest, CartResponse, CartData } from '../interfaces/cart.interface.js';
 import { AppError } from '../utils/appError.js';
 import { NotificationService } from './notification.service.js';
 
-const prisma = new PrismaClient();
 const notificationService = new NotificationService();
 
 const itemInclude = { product: { include: { images: true } } } as const;
@@ -53,6 +53,97 @@ export class CartService {
     return cart;
   }
 
+  async mergeItems(
+    userId: string,
+    items: AddCartItemRequest[]
+  ): Promise<CartResponse> {
+    if (!Array.isArray(items)) {
+      throw new AppError('Invalid cart items', 400);
+    }
+
+    const mergedCart = await prisma.$transaction(async (tx) => {
+      let cart = await tx.cart.findUnique({
+        where: { userId },
+        include: { items: { include: itemInclude } },
+      });
+
+      if (!cart) {
+        cart = await tx.cart.create({
+          data: { userId },
+          include: { items: { include: itemInclude } },
+        });
+      }
+
+      for (const item of items) {
+        if (
+          !item.productId ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity < 1
+        ) {
+          throw new AppError('Invalid cart item quantity or product', 400);
+        }
+
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+        });
+
+        if (!product) throw new AppError('Product not found', 404);
+        if (product.productType !== 'READY_TO_WEAR') {
+          throw new AppError('Only ready-to-wear products can be added to cart', 400);
+        }
+        if (!product.isAvailable) {
+          throw new AppError('Product is not available', 400);
+        }
+
+        const existing = await tx.cartItem.findFirst({
+          where: {
+            cartId: cart.id,
+            productId: item.productId,
+            size: item.size ?? null,
+            color: item.color ?? null,
+          },
+        });
+
+        const nextQuantity = (existing?.quantity ?? 0) + item.quantity;
+
+        if (product.stockQuantity < nextQuantity) {
+          throw new AppError('Insufficient stock', 400);
+        }
+
+        if (existing) {
+          await tx.cartItem.update({
+            where: { id: existing.id },
+            data: { quantity: nextQuantity },
+          });
+        } else {
+          await tx.cartItem.create({
+            data: {
+              cartId: cart.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              size: item.size ?? null,
+              color: item.color ?? null,
+            },
+          });
+        }
+      }
+
+      return tx.cart.findUnique({
+        where: { userId },
+        include: { items: { include: itemInclude } },
+      });
+    });
+
+    if (!mergedCart) {
+      throw new AppError('Unable to retrieve merged cart', 500);
+    }
+
+    return {
+      success: true,
+      message: 'Guest cart merged successfully',
+      data: formatCart(mergedCart),
+    };
+  }
   async getCart(userId: string): Promise<CartResponse> {
     const cart = await this.getOrCreateCart(userId);
     return { success: true, message: 'Cart retrieved successfully', data: formatCart(cart) };
@@ -117,6 +208,10 @@ export class CartService {
     if (!item) throw new AppError('Cart item not found', 404);
     if (item.product.productType !== 'READY_TO_WEAR') throw new AppError('Only ready-to-wear products can be in cart', 400);
     if (item.product.stockQuantity < body.quantity) throw new AppError('Insufficient stock', 400);
+    await prisma.cartItem.update({
+      where: { id: item.id },
+      data: { quantity: body.quantity },
+    });
 
     const updated = await prisma.cart.findUnique({ where: { userId }, include: { items: { include: itemInclude } } });
     return { success: true, message: 'Cart item updated', data: formatCart(updated!) };

@@ -428,6 +428,13 @@
 					"CASH_ON_DELIVERY"
 				]
 			},
+			"PaymentProviderType": {
+				"type": "string",
+				"enum": [
+					"PAYPACK",
+					"KPAY"
+				]
+			},
 			"PaymentStatusType": {
 				"type": "string",
 				"enum": [
@@ -449,6 +456,14 @@
 					},
 					"paymentMethod": {
 						"$ref": "#/components/schemas/PaymentMethodType"
+					},
+					"provider": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/PaymentProviderType"
+							}
+						],
+						"nullable": true
 					},
 					"status": {
 						"$ref": "#/components/schemas/PaymentStatusType"
@@ -496,6 +511,14 @@
 							},
 							"status": {
 								"$ref": "#/components/schemas/PaymentStatusType"
+							},
+							"provider": {
+								"allOf": [
+									{
+										"$ref": "#/components/schemas/PaymentProviderType"
+									}
+								],
+								"nullable": true
 							},
 							"paymentMethod": {
 								"$ref": "#/components/schemas/PaymentMethodType"
@@ -3349,6 +3372,36 @@
 				"parameters": []
 			}
 		},
+		"/payments/webhook/paypack": {
+			"post": {
+				"operationId": "HandlePaypackWebhook",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"reply": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"reply"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
 		"/payments/order/{orderId}": {
 			"get": {
 				"operationId": "GetPaymentByOrderId",
@@ -4969,6 +5022,51 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/AddCartItemRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/cart/merge": {
+			"post": {
+				"operationId": "MergeItems",
+				"responses": {
+					"200": {
+						"description": "Guest cart merged",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CartResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid cart items"
+					}
+				},
+				"description": "Merge guest cart items into the authenticated customer's cart",
+				"tags": [
+					"Cart"
+				],
+				"security": [
+					{
+						"jwt": [
+							"CUSTOMER"
+						]
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"items": {
+									"$ref": "#/components/schemas/AddCartItemRequest"
+								},
+								"type": "array"
 							}
 						}
 					}

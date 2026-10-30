@@ -1,9 +1,9 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
+import { Prisma } from '@prisma/client';
 import { OrderData, GuestPlaceOrderRequest, PlaceOrderRequest, UpdateOrderStatusRequest, OrderResponse, OrderListResponse } from '../interfaces/order.interface.js';
 import { AppError } from '../utils/appError.js';
 import { NotificationService } from './notification.service.js';
 
-const prisma = new PrismaClient();
 const notificationService = new NotificationService();
 
 export class OrderService {
@@ -244,42 +244,94 @@ export class OrderService {
     return { success: true, message: 'Orders retrieved successfully', data: orders.map(this.formatOrder), totalPages: Math.ceil(total / limit) };
   }
 
-  async updateOrderStatus(orderId: string, body: UpdateOrderStatusRequest): Promise<OrderResponse> {
-    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: { include: { product: true } } } });
-    if (!order) throw new AppError('Order not found', 404);
+  async updateOrderStatus(
+    orderId: string,
+    body: UpdateOrderStatusRequest,
+  ): Promise<OrderResponse> {
+    const updated = await prisma.$transaction(
+      async (transaction: Prisma.TransactionClient) => {
+        const order = await transaction.order.findUnique({
+          where: { id: orderId },
+          include: { items: { include: { product: true } } },
+        });
 
-    const previousStatus = order.status;
-    const updated = await prisma.order.update({ where: { id: orderId }, data: { status: body.status }, include: { items: { include: { product: true } } } });
-
-    // Restore stock if order was cancelled and it was previously not cancelled
-    if (body.status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
-      for (const item of order.items) {
-        if (item.product.productType === 'READY_TO_WEAR') {
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { stockQuantity: { increment: item.quantity } },
-          });
+        if (!order) {
+          throw new AppError('Order not found', 404);
         }
-      }
-    }
 
-    // If order was previously cancelled and is now being restored, deduct stock again
-    if (previousStatus === 'CANCELLED' && body.status !== 'CANCELLED') {
-      for (const item of order.items) {
-        if (item.product.productType === 'READY_TO_WEAR') {
-          const product = await prisma.product.findUnique({ where: { id: item.productId } });
-          if (!product || product.stockQuantity < item.quantity) {
-            throw new AppError(`Insufficient stock to restore order for "${item.product.name}"`, 400);
+        const previousStatus = order.status;
+
+        const statusUpdate = await transaction.order.updateMany({
+          where: {
+            id: orderId,
+            status: previousStatus,
+          },
+          data: {
+            status: body.status,
+            ...(body.status === 'CANCELLED' &&
+            order.paymentStatus !== 'PAID' &&
+            order.paymentStatus !== 'REFUNDED'
+              ? { paymentStatus: 'CANCELLED' }
+              : {}),
+          },
+        });
+
+        if (statusUpdate.count !== 1) {
+          throw new AppError(
+            'Order status changed concurrently. Please retry.',
+            409,
+          );
+        }
+
+        if (body.status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
+          for (const item of order.items) {
+            if (item.product.productType === 'READY_TO_WEAR') {
+              await transaction.product.update({
+                where: { id: item.productId },
+                data: { stockQuantity: { increment: item.quantity } },
+              });
+            }
           }
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { stockQuantity: { decrement: item.quantity } },
+
+          await transaction.payment.updateMany({
+            where: { orderId, status: 'PENDING' },
+            data: { status: 'CANCELLED' },
           });
         }
-      }
-    }
 
-    return { success: true, message: 'Order status updated', data: this.formatOrder(updated) };
+        if (previousStatus === 'CANCELLED' && body.status !== 'CANCELLED') {
+          for (const item of order.items) {
+            if (item.product.productType === 'READY_TO_WEAR') {
+              const stockUpdate = await transaction.product.updateMany({
+                where: {
+                  id: item.productId,
+                  stockQuantity: { gte: item.quantity },
+                },
+                data: { stockQuantity: { decrement: item.quantity } },
+              });
+
+              if (stockUpdate.count !== 1) {
+                throw new AppError(
+                  `Insufficient stock to restore order for "${item.product.name}"`,
+                  400,
+                );
+              }
+            }
+          }
+        }
+
+        return transaction.order.findUniqueOrThrow({
+          where: { id: orderId },
+          include: { items: true },
+        });
+      },
+    );
+
+    return {
+      success: true,
+      message: 'Order status updated',
+      data: this.formatOrder(updated),
+    };
   }
 }
 

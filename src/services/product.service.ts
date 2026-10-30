@@ -1,9 +1,8 @@
-import { PrismaClient, Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage, ProductType } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
+import { Prisma, Product as PrismaProduct, ProductImage as PrismaProductImage, ProductType } from '@prisma/client';
 import { CreateProductDTO, UpdateProductDTO, Product, ProductFilters, StockStatus } from '../interfaces/product.interface.js';
 import { AppError } from '../utils/appError.js';
 import { ImageService } from './image.service.js';
-
-const prisma = new PrismaClient();
 
 type PrismaProductWithImages = PrismaProduct & { images: PrismaProductImage[] };
 

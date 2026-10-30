@@ -218,6 +218,9 @@ model Payment {
   customOrderId String?
   amount        Decimal             @db.Decimal(10, 2)
   paymentMethod PaymentMethod
+  provider      PaymentProvider?
+
+  providerTransactionRef String? @unique
   status        PaymentRecordStatus @default(PENDING)
   ref           String              @unique
   phoneNumber   String?
@@ -255,6 +258,11 @@ enum PaymentStatus {
   FAILED
   CANCELLED
   REFUNDED
+}
+
+enum PaymentProvider {
+  PAYPACK
+  KPAY
 }
 
 enum PaymentMethod {
@@ -296,4 +304,15 @@ enum NotificationType {
   CONTACT_MESSAGE_RECEIVED
   CART_ACTIVITY
   SYSTEM
+}
+model PaypackWebhookEvent {
+  id            String    @id @default(uuid())
+  eventId       String    @unique
+  transactionRef String
+  payload       Json
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([transactionRef, processedAt])
 }
