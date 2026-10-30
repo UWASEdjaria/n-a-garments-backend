@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from 'express';
+﻿import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -40,7 +40,7 @@ app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ success: true, message: 'nagarments API is running' });
 });
 
-app.head('/payments/webhook/paypack', (_req, res) => {
+app.head('/payments/webhook/kpay', (_req, res) => {
   res.sendStatus(200);
 });
 
@@ -49,4 +49,5 @@ RegisterRoutes(app);
 app.use(errorHandler);
 
 export default app;
+
 

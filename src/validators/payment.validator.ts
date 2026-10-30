@@ -1,9 +1,9 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 
 export const initiatePaymentSchema = z
   .object({
     orderId: z.string().min(1, 'Order ID is required'),
-    amount: z.number().positive('Amount must be greater than zero'),
+    amount: z.number().int().positive('Amount must be a positive whole number of RWF'),
     paymentMethod: z.enum(['MOMO', 'CARD', 'CASH_ON_DELIVERY']),
     phoneNumber: z.string().optional(),
   })
@@ -24,7 +24,7 @@ export const initiateGuestPaymentSchema = z
   .object({
     orderId: z.string().min(1, 'Order ID is required'),
     email: z.string().trim().email('A valid email address is required'),
-    amount: z.number().positive('Amount must be greater than zero'),
+    amount: z.number().int().positive('Amount must be a positive whole number of RWF'),
     paymentMethod: z.enum(['MOMO', 'CARD', 'CASH_ON_DELIVERY']),
     phoneNumber: z.string().optional(),
   })

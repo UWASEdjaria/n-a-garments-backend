@@ -22,14 +22,16 @@ test('SUCCESSFUL payment cannot be retried', () => {
   assert.equal(isRetryEligible({ status: 'SUCCESSFUL' }), false);
 });
 
-import { PaypackRequestError } from './paypack.service.js';
+import { KPayRequestError } from './kpay.service.js';
 
-test('confirmed Paypack rejection returns HTTP 400', () => {
-  const error = new PaypackRequestError('Payment rejected', true);
+test('confirmed K-Pay rejection returns HTTP 400', () => {
+  const error = new KPayRequestError('Payment rejected', true);
   assert.equal(error.statusCode, 400);
 });
 
-test('uncertain Paypack outcome returns HTTP 503', () => {
-  const error = new PaypackRequestError('Payment outcome uncertain', false);
+test('uncertain K-Pay outcome returns HTTP 503', () => {
+  const error = new KPayRequestError('Payment outcome uncertain', false);
   assert.equal(error.statusCode, 503);
 });
+
+

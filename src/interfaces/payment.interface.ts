@@ -1,11 +1,7 @@
-import type { PaypackParams } from 'paypack-js';
-
+﻿
 export type PaymentStatusType = 'PENDING' | 'PAID' | 'SUCCESSFUL' | 'FAILED' | 'CANCELLED';
 export type PaymentMethodType = 'MOMO' | 'CARD' | 'CASH_ON_DELIVERY';
 
-export interface PaypackCashinParams extends PaypackParams {
-  environment: 'development' | 'production';
-}
 
 export interface InitiatePaymentDTO {
   orderId: string;
@@ -27,6 +23,7 @@ export interface PaymentResponse {
   message: string;
   data: {
     paymentId: string;
+    checkoutUrl?: string;
     orderId: string;
     amount: number;
     paymentMethod: PaymentMethodType;
@@ -46,11 +43,4 @@ export interface PaymentAttemptSummary {
   createdAt: string;
 }
 
-export interface PaypackError {
-  message?: string;
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-}
+
