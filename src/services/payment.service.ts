@@ -1,5 +1,5 @@
 import { prisma } from '../utils/prisma.js';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { PrismaClient, type Payment, type Prisma } from '@prisma/client';
 import {
   InitiateGuestPaymentDTO,
@@ -7,6 +7,9 @@ import {
   UpdatePaymentStatusDTO,
   PaymentResponse,
   PaymentAttemptSummary,
+  InitiateCustomQuotePaymentDTO,
+  CustomQuotePaymentResponse,
+  CustomQuotePaymentStatusResponse,
 } from '../interfaces/payment.interface.js';
 import { AppError } from '../utils/appError.js';
 import { KPayRequestError, KPayService } from './kpay.service.js';
@@ -43,6 +46,219 @@ export class PaymentService {
     this.paypackService = paypackService;
   }
 
+  private async findQuoteByToken(token: string) {
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      throw new AppError('Quote link is invalid or expired.', 404);
+    }
+
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    const order = await this.prisma.customOrder.findFirst({
+      where: {
+        quoteAccessTokenHash: tokenHash,
+        quoteAccessTokenExpiresAt: { gt: new Date() },
+        quoteStatus: { in: ['PROPOSED', 'ACCEPTED'] },
+      },
+    });
+
+    if (!order) {
+      throw new AppError('Quote link is invalid or expired.', 404);
+    }
+
+    return order;
+  }
+
+  public async initiateCustomQuotePayment(
+    token: string,
+    data: InitiateCustomQuotePaymentDTO
+  ): Promise<CustomQuotePaymentResponse> {
+    const order = await this.findQuoteByToken(token);
+
+    if (order.quoteStatus !== 'ACCEPTED') {
+      throw new AppError('Please accept the quote before making payment.', 409);
+    }
+
+    if (order.quoteTotal === null || order.advanceAmount === null) {
+      throw new AppError('The quote payment amounts are incomplete.', 409);
+    }
+
+    const phoneNumber = formatRwandaPhone(data.phoneNumber);
+
+    const payment = await this.prisma.$transaction(
+      async (transaction: Prisma.TransactionClient) => {
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+
+        const currentOrder = await transaction.customOrder.findFirst({
+          where: {
+            id: order.id,
+            quoteStatus: 'ACCEPTED',
+            quoteAccessTokenHash: tokenHash,
+            quoteAccessTokenExpiresAt: { gt: new Date() },
+          },
+        });
+
+        if (
+          !currentOrder ||
+          currentOrder.quoteTotal === null ||
+          currentOrder.advanceAmount === null
+        ) {
+          throw new AppError('Quote link is invalid or expired.', 404);
+        }
+
+        const pendingAttempt = await transaction.payment.findFirst({
+          where: {
+            customOrderId: currentOrder.id,
+            status: 'PENDING',
+          },
+        });
+
+        if (pendingAttempt) {
+          throw new AppError(
+            'A payment attempt is already pending. Check its status before retrying.',
+            409
+          );
+        }
+
+        const remainingAdvance = currentOrder.advanceAmount
+          .sub(currentOrder.advancePaidAmount)
+          .toNumber();
+
+        if (!Number.isSafeInteger(remainingAdvance) || remainingAdvance <= 0) {
+          throw new AppError('There is no outstanding integer advance payment.', 409);
+        }
+
+        return transaction.payment.create({
+          data: {
+            customOrderId: currentOrder.id,
+            amount: remainingAdvance,
+            paymentMethod: 'MOMO',
+            provider: 'PAYPACK',
+            status: 'PENDING',
+            ref: `ATTEMPT-${randomUUID()}`,
+            phoneNumber,
+          },
+        });
+      },
+      { maxWait: 10000, timeout: 15000 }
+    );
+
+    let cashInAccepted = false;
+
+    try {
+      const amount = payment.amount.toNumber();
+
+      const result = await this.paypackService.cashIn({
+        phoneNumber,
+        amount,
+        idempotencyKey: payment.id.replace(/-/g, '').slice(0, 32),
+      });
+
+      cashInAccepted = true;
+
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { providerTransactionRef: result.ref },
+      });
+
+      // Paypack processes asynchronously - rely on the webhook to confirm status.
+      await this.processPendingPaypackEvents(result.ref);
+    } catch (error) {
+      if (
+        !cashInAccepted &&
+        error instanceof PaypackRequestError &&
+        error.definitivelyRejected
+      ) {
+        await this.prisma.payment.updateMany({
+          where: { id: payment.id, status: 'PENDING' },
+          data: { status: 'FAILED' },
+        });
+      }
+
+      throw error;
+    }
+
+    const [updatedPayment, updatedOrder] = await Promise.all([
+      this.prisma.payment.findUnique({ where: { id: payment.id } }),
+      this.prisma.customOrder.findUnique({ where: { id: order.id } }),
+    ]);
+
+    if (
+      !updatedPayment ||
+      !updatedOrder ||
+      updatedOrder.quoteTotal === null ||
+      updatedOrder.advanceAmount === null ||
+      updatedOrder.balanceAmount === null
+    ) {
+      throw new AppError('Payment status could not be retrieved.', 404);
+    }
+
+    return {
+      success: true,
+      message: 'Custom quote payment initiated.',
+      data: {
+        paymentId: updatedPayment.id,
+        customOrderId: updatedOrder.id,
+        quoteReference: updatedOrder.quoteReference,
+        amount: Number(updatedPayment.amount),
+        paymentMethod: 'MOMO',
+        provider: 'PAYPACK',
+        status: updatedPayment.status,
+        ref: updatedPayment.ref,
+        quoteTotal: Number(updatedOrder.quoteTotal),
+        advanceAmount: Number(updatedOrder.advanceAmount),
+        advancePaidAmount: Number(updatedOrder.advancePaidAmount),
+        balanceAmount: Number(updatedOrder.balanceAmount),
+      },
+    };
+  }
+
+  public async getCustomQuotePaymentStatus(
+    token: string
+  ): Promise<CustomQuotePaymentStatusResponse> {
+    const order = await this.findQuoteByToken(token);
+
+    if (
+      order.quoteTotal === null ||
+      order.advanceAmount === null ||
+      order.balanceAmount === null
+    ) {
+      throw new AppError('The quote payment amounts are incomplete.', 409);
+    }
+
+    const payments = await this.prisma.payment.findMany({
+      where: { customOrderId: order.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        amount: true,
+        status: true,
+        ref: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Custom quote payment status retrieved.',
+      data: {
+        customOrderId: order.id,
+        quoteReference: order.quoteReference,
+        quoteStatus: order.quoteStatus as 'PROPOSED' | 'ACCEPTED',
+        paymentStatus: order.paymentStatus,
+        quoteTotal: Number(order.quoteTotal),
+        advanceAmount: Number(order.advanceAmount),
+        advancePaidAmount: Number(order.advancePaidAmount),
+        balanceAmount: Number(order.balanceAmount),
+        payments: payments.map((item) => ({
+          paymentId: item.id,
+          amount: Number(item.amount),
+          status: item.status,
+          ref: item.ref,
+          createdAt: item.createdAt.toISOString(),
+        })),
+      },
+    };
+  }
   public async initiateGuestPayment(
     data: InitiateGuestPaymentDTO
   ): Promise<PaymentResponse> {
@@ -228,35 +444,8 @@ export class PaymentService {
           data: { providerTransactionRef: result.ref },
         });
 
-        let verified: Awaited<ReturnType<PaypackService['findTransaction']>> | undefined;
-
-        try {
-          verified = await this.paypackService.findTransaction(result.ref);
-        } catch (error) {
-          if (
-            !(error instanceof PaypackRequestError) ||
-            error.definitivelyRejected
-          ) {
-            throw error;
-          }
-        }
-
-        if (
-          verified &&
-          (
-            verified.ref !== result.ref ||
-            verified.kind !== 'CASHIN' ||
-            verified.amount !== amount
-          )
-        ) {
-          throw new AppError('Paypack transaction could not be independently verified.', 409);
-        }
-
+        // Paypack processes asynchronously - rely on the webhook to confirm status.
         await this.processPendingPaypackEvents(result.ref);
-
-        if (verified && verified.status !== 'pending') {
-          await this.applyPaypackTransactionStatus(payment.id, verified);
-        }
 
         const refreshedPayment = await this.prisma.payment.findUnique({
           where: { id: payment.id },
@@ -799,6 +988,83 @@ export class PaymentService {
           }
         }
 
+        if (verified.status === 'successful' && current.customOrderId) {
+          const customOrder = await transaction.customOrder.findUnique({
+            where: { id: current.customOrderId },
+          });
+
+          if (
+            !customOrder ||
+            customOrder.quoteStatus !== 'ACCEPTED' ||
+            customOrder.quoteTotal === null ||
+            customOrder.advanceAmount === null
+          ) {
+            throw new AppError(
+              'Accepted custom quote could not be verified for payment.',
+              409
+            );
+          }
+
+          const newAdvancePaid = customOrder.advancePaidAmount.add(
+            current.amount
+          );
+
+          if (
+            newAdvancePaid.greaterThan(customOrder.advanceAmount) ||
+            newAdvancePaid.greaterThan(customOrder.quoteTotal)
+          ) {
+            throw new AppError(
+              'Verified payment exceeds the outstanding quote advance.',
+              409
+            );
+          }
+
+          const newBalance = customOrder.quoteTotal.sub(newAdvancePaid);
+
+          const claimedPayment = await transaction.payment.updateMany({
+            where: {
+              id: current.id,
+              status: 'PENDING',
+              provider: 'PAYPACK',
+              customOrderId: customOrder.id,
+            },
+            data: {
+              status: 'PAID',
+              ...(eventId ? { providerEventId: eventId } : {}),
+            },
+          });
+
+          if (claimedPayment.count !== 1) {
+            throw new AppError(
+              'Custom quote payment has already been processed.',
+              409
+            );
+          }
+
+          const updatedQuote = await transaction.customOrder.updateMany({
+            where: {
+              id: customOrder.id,
+              quoteStatus: 'ACCEPTED',
+              advancePaidAmount: customOrder.advancePaidAmount,
+            },
+            data: {
+              advancePaidAmount: newAdvancePaid,
+              balanceAmount: newBalance,
+              paymentStatus: newBalance.lessThanOrEqualTo(0)
+                ? 'PAID'
+                : 'PENDING',
+            },
+          });
+
+          if (updatedQuote.count !== 1) {
+            throw new AppError(
+              'Quote payment accounting changed during processing. Please retry verification.',
+              409
+            );
+          }
+
+          return;
+        }
         let finalStatus: 'PAID' | 'SUCCESSFUL' | 'FAILED';
 
         if (verified.status === 'successful') {

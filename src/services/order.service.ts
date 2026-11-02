@@ -97,7 +97,7 @@ export class OrderService {
       await notificationService.createNotification({
         type: 'ORDER_RECEIVED',
         title: 'New order received',
-        message: `${user?.name ?? 'A customer'} placed a new order worth GHC ${Number(order.totalAmount).toFixed(2)}.`,
+        message: `${user?.name ?? 'A customer'} placed a new order worth RWF ${Number(order.totalAmount).toFixed(2)}.`,
         resourceType: 'ORDER',
         resourceId: order.id,
         actorName: user?.name ?? null,
@@ -193,7 +193,7 @@ export class OrderService {
       await notificationService.createNotification({
         type: 'ORDER_RECEIVED',
         title: 'New guest order received',
-        message: `${body.name} placed a new order worth GHC ${Number(order.totalAmount).toFixed(2)}.`,
+        message: `${body.name} placed a new order worth RWF ${Number(order.totalAmount).toFixed(2)}.`,
         resourceType: 'ORDER',
         resourceId: order.id,
         actorName: body.name,

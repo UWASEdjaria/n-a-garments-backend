@@ -607,6 +607,201 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"CustomQuotePaymentResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"balanceAmount": {
+								"type": "number",
+								"format": "double"
+							},
+							"advancePaidAmount": {
+								"type": "number",
+								"format": "double"
+							},
+							"advanceAmount": {
+								"type": "number",
+								"format": "double"
+							},
+							"quoteTotal": {
+								"type": "number",
+								"format": "double"
+							},
+							"ref": {
+								"type": "string"
+							},
+							"status": {
+								"$ref": "#/components/schemas/PaymentStatusType"
+							},
+							"provider": {
+								"type": "string",
+								"enum": [
+									"PAYPACK"
+								],
+								"nullable": false
+							},
+							"paymentMethod": {
+								"type": "string",
+								"enum": [
+									"MOMO"
+								],
+								"nullable": false
+							},
+							"amount": {
+								"type": "number",
+								"format": "double"
+							},
+							"quoteReference": {
+								"type": "string",
+								"nullable": true
+							},
+							"customOrderId": {
+								"type": "string"
+							},
+							"paymentId": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"balanceAmount",
+							"advancePaidAmount",
+							"advanceAmount",
+							"quoteTotal",
+							"ref",
+							"status",
+							"provider",
+							"paymentMethod",
+							"amount",
+							"quoteReference",
+							"customOrderId",
+							"paymentId"
+						],
+						"type": "object"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"InitiateCustomQuotePaymentDTO": {
+				"properties": {
+					"phoneNumber": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"phoneNumber"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CustomQuotePaymentStatusResponse": {
+				"properties": {
+					"success": {
+						"type": "boolean"
+					},
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"payments": {
+								"items": {
+									"properties": {
+										"createdAt": {
+											"type": "string"
+										},
+										"ref": {
+											"type": "string"
+										},
+										"status": {
+											"$ref": "#/components/schemas/PaymentStatusType"
+										},
+										"amount": {
+											"type": "number",
+											"format": "double"
+										},
+										"paymentId": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"createdAt",
+										"ref",
+										"status",
+										"amount",
+										"paymentId"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"balanceAmount": {
+								"type": "number",
+								"format": "double"
+							},
+							"advancePaidAmount": {
+								"type": "number",
+								"format": "double"
+							},
+							"advanceAmount": {
+								"type": "number",
+								"format": "double"
+							},
+							"quoteTotal": {
+								"type": "number",
+								"format": "double"
+							},
+							"paymentStatus": {
+								"type": "string"
+							},
+							"quoteStatus": {
+								"type": "string",
+								"enum": [
+									"PROPOSED",
+									"ACCEPTED"
+								]
+							},
+							"quoteReference": {
+								"type": "string",
+								"nullable": true
+							},
+							"customOrderId": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"payments",
+							"balanceAmount",
+							"advancePaidAmount",
+							"advanceAmount",
+							"quoteTotal",
+							"paymentStatus",
+							"quoteStatus",
+							"quoteReference",
+							"customOrderId"
+						],
+						"type": "object"
+					}
+				},
+				"required": [
+					"success",
+					"message",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"UpdatePaymentStatusDTO": {
 				"properties": {
 					"status": {
@@ -3336,6 +3531,90 @@
 						}
 					}
 				}
+			}
+		},
+		"/payments/custom-quote/{token}/initiate": {
+			"post": {
+				"operationId": "InitiateCustomQuotePayment",
+				"responses": {
+					"200": {
+						"description": "Payment initiated",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CustomQuotePaymentResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid payment details"
+					},
+					"404": {
+						"description": "Quote link not found or expired"
+					},
+					"409": {
+						"description": "Quote not accepted or payment already pending"
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "token",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/InitiateCustomQuotePaymentDTO"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/payments/custom-quote/{token}": {
+			"get": {
+				"operationId": "GetCustomQuotePaymentStatus",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CustomQuotePaymentStatusResponse"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Quote link not found or expired"
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "token",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/payments/webhook/kpay": {

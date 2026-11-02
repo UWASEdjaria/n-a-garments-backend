@@ -257,6 +257,34 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CustomQuotePaymentResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "success": {"dataType":"boolean","required":true},
+            "message": {"dataType":"string","required":true},
+            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"balanceAmount":{"dataType":"double","required":true},"advancePaidAmount":{"dataType":"double","required":true},"advanceAmount":{"dataType":"double","required":true},"quoteTotal":{"dataType":"double","required":true},"ref":{"dataType":"string","required":true},"status":{"ref":"PaymentStatusType","required":true},"provider":{"dataType":"enum","enums":["PAYPACK"],"required":true},"paymentMethod":{"dataType":"enum","enums":["MOMO"],"required":true},"amount":{"dataType":"double","required":true},"quoteReference":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},"customOrderId":{"dataType":"string","required":true},"paymentId":{"dataType":"string","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "InitiateCustomQuotePaymentDTO": {
+        "dataType": "refObject",
+        "properties": {
+            "phoneNumber": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CustomQuotePaymentStatusResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "success": {"dataType":"boolean","required":true},
+            "message": {"dataType":"string","required":true},
+            "data": {"dataType":"nestedObjectLiteral","nestedProperties":{"payments":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"createdAt":{"dataType":"string","required":true},"ref":{"dataType":"string","required":true},"status":{"ref":"PaymentStatusType","required":true},"amount":{"dataType":"double","required":true},"paymentId":{"dataType":"string","required":true}}},"required":true},"balanceAmount":{"dataType":"double","required":true},"advancePaidAmount":{"dataType":"double","required":true},"advanceAmount":{"dataType":"double","required":true},"quoteTotal":{"dataType":"double","required":true},"paymentStatus":{"dataType":"string","required":true},"quoteStatus":{"dataType":"union","subSchemas":[{"dataType":"enum","enums":["PROPOSED"]},{"dataType":"enum","enums":["ACCEPTED"]}],"required":true},"quoteReference":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},"customOrderId":{"dataType":"string","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "UpdatePaymentStatusDTO": {
         "dataType": "refObject",
         "properties": {
@@ -1501,6 +1529,67 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPaymentController_initiateCustomQuotePayment: Record<string, TsoaRoute.ParameterSchema> = {
+                token: {"in":"path","name":"token","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"ref":"InitiateCustomQuotePaymentDTO"},
+        };
+        app.post('/payments/custom-quote/:token/initiate',
+            ...(fetchMiddlewares<RequestHandler>(PaymentController)),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.initiateCustomQuotePayment)),
+
+            async function PaymentController_initiateCustomQuotePayment(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPaymentController_initiateCustomQuotePayment, request, response });
+
+                const controller = new PaymentController();
+
+              await templateService.apiHandler({
+                methodName: 'initiateCustomQuotePayment',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPaymentController_getCustomQuotePaymentStatus: Record<string, TsoaRoute.ParameterSchema> = {
+                token: {"in":"path","name":"token","required":true,"dataType":"string"},
+        };
+        app.get('/payments/custom-quote/:token',
+            ...(fetchMiddlewares<RequestHandler>(PaymentController)),
+            ...(fetchMiddlewares<RequestHandler>(PaymentController.prototype.getCustomQuotePaymentStatus)),
+
+            async function PaymentController_getCustomQuotePaymentStatus(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPaymentController_getCustomQuotePaymentStatus, request, response });
+
+                const controller = new PaymentController();
+
+              await templateService.apiHandler({
+                methodName: 'getCustomQuotePaymentStatus',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
               });
             } catch (err) {
                 return next(err);

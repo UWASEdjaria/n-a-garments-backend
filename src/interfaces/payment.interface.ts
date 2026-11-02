@@ -47,3 +47,49 @@ export interface PaymentAttemptSummary {
 }
 
 
+
+
+export interface InitiateCustomQuotePaymentDTO {
+  phoneNumber: string;
+}
+
+export interface CustomQuotePaymentResponse {
+  success: boolean;
+  message: string;
+  data: {
+    paymentId: string;
+    customOrderId: string;
+    quoteReference: string | null;
+    amount: number;
+    paymentMethod: 'MOMO';
+    provider: 'PAYPACK';
+    status: PaymentStatusType;
+    ref: string;
+    quoteTotal: number;
+    advanceAmount: number;
+    advancePaidAmount: number;
+    balanceAmount: number;
+  };
+}
+
+export interface CustomQuotePaymentStatusResponse {
+  success: boolean;
+  message: string;
+  data: {
+    customOrderId: string;
+    quoteReference: string | null;
+    quoteStatus: 'PROPOSED' | 'ACCEPTED';
+    paymentStatus: string;
+    quoteTotal: number;
+    advanceAmount: number;
+    advancePaidAmount: number;
+    balanceAmount: number;
+    payments: Array<{
+      paymentId: string;
+      amount: number;
+      status: PaymentStatusType;
+      ref: string;
+      createdAt: string;
+    }>;
+  };
+}
