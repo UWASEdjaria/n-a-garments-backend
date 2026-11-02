@@ -1,11 +1,9 @@
-﻿import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import type {
   AdminCart,
   AdminCartItem,
   AdminCartListResponse,
 } from '../interfaces/admin-cart.interface.js';
-
-const prisma = new PrismaClient();
 
 export class AdminCartService {
   async getAllCarts(): Promise<AdminCartListResponse> {

@@ -1,10 +1,9 @@
+import { prisma } from '../utils/prisma.js';
 import { randomUUID } from "node:crypto";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from '@prisma/client';
 import { AddStockDTO, DeleteStockResponse, EditStockDTO, StockEntry, StockSummary } from "../interfaces/stock.interface.js";
 import { StockStatus } from "../interfaces/product.interface.js";
 import { AppError } from "../utils/appError.js";
-
-const prisma = new PrismaClient();
 
 export class StockService {
   private getStockStatus(quantity: number, minimumStockLevel: number, maximumStockLevel: number): StockStatus {

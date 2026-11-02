@@ -5,30 +5,45 @@ import { ProductsServices } from '../services/product.service.js';
 import { createProductSchema, updateProductSchema, ALLOWED_SIZES, ALLOWED_COLORS, ALLOWED_PRODUCT_TYPES } from '../validators/product.validator.js';
 import { AppError } from '../utils/appError.js';
 
+const isSwaggerPlaceholder = (value?: string): boolean =>
+  value !== undefined && ['string', 'undefined'].includes(value.trim().toLowerCase());
+
 const parseArray = (value?: string): string[] => {
   if (!value) return [];
   try { return JSON.parse(value) as string[]; } catch { return value.split(',').map((s) => s.trim()).filter(Boolean); }
 };
+
 const cleanOptionalString = (value?: string): string | undefined => {
-  if (!value || value === 'string' || value === 'undefined') {
-    return undefined;
-  }
+  if (!value || isSwaggerPlaceholder(value)) return undefined;
   return value;
 };
+
+const parseOptionalArray = (value?: string): string[] | undefined => {
+  if (value === undefined || value.trim() === '' || isSwaggerPlaceholder(value)) {
+    return undefined;
+  }
+  return parseArray(value);
+};
+
 const parseOptionalNumber = (value?: string): number | undefined => {
-  if (value === undefined || value.trim() === '') return undefined;
+  if (value === undefined || value.trim() === '' || isSwaggerPlaceholder(value)) return undefined;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) throw new AppError('Numeric fields must be valid numbers', 400);
   return parsed;
 };
+
 const parseOptionalBoolean = (value?: string): boolean | undefined => {
-  if (value === undefined || value === '') return undefined;
+  if (value === undefined || value.trim() === '' || isSwaggerPlaceholder(value)) return undefined;
   if (value === 'true') return true;
   if (value === 'false') return false;
   throw new AppError('Availability must be true or false', 400);
 };
+
 const parseProductType = (value?: string): 'READY_TO_WEAR' | 'MADE_TO_ORDER' | undefined => {
-  if (!value || !ALLOWED_PRODUCT_TYPES.includes(value as 'READY_TO_WEAR' | 'MADE_TO_ORDER')) return undefined;
+  if (!value || value.trim() === '' || isSwaggerPlaceholder(value)) return undefined;
+  if (!ALLOWED_PRODUCT_TYPES.includes(value as 'READY_TO_WEAR' | 'MADE_TO_ORDER')) {
+    throw new AppError('Product type must be READY_TO_WEAR or MADE_TO_ORDER', 400);
+  }
   return value as 'READY_TO_WEAR' | 'MADE_TO_ORDER';
 };
 
@@ -138,30 +153,35 @@ export class ProductController extends Controller {
     @FormField() imageUrl?: string,
     @UploadedFile() image?: Express.Multer.File
   ): Promise<Product> {
-    const parsedPrice = price === undefined
-  ? undefined
-  : price.trim() === ''
-    ? null
-    : parseOptionalNumber(price);
+    const parsedPrice = price === undefined || isSwaggerPlaceholder(price)
+      ? undefined
+      : price.trim() === ''
+        ? null
+        : parseOptionalNumber(price);
     const parsedStockQuantity = parseOptionalNumber(stockQuantity);
     const parsedMinimumStockLevel = parseOptionalNumber(minimumStockLevel);
     const parsedMaximumStockLevel = parseOptionalNumber(maximumStockLevel);
     const parsedIsAvailable = parseOptionalBoolean(isAvailable);
     const parsedProductType = parseProductType(productType);
+    const cleanedCategoryId = cleanOptionalString(categoryId);
+    const cleanedImageUrl = cleanOptionalString(imageUrl);
+    const parsedSizes = parseOptionalArray(sizes);
+    const parsedColors = parseOptionalArray(colors);
+
     const dto: UpdateProductDTO = {
-      ...(name && { name }),
-      ...(slug && { slug }),
-      ...(description && { description }),
+      ...(cleanOptionalString(name) && { name: cleanOptionalString(name) }),
+      ...(cleanOptionalString(slug) && { slug: cleanOptionalString(slug) }),
+      ...(cleanOptionalString(description) && { description: cleanOptionalString(description) }),
       ...(parsedPrice !== undefined && { price: parsedPrice }),
-      ...(cleanOptionalString(categoryId) && { categoryId: cleanOptionalString(categoryId) }),
+      ...(cleanedCategoryId && { categoryId: cleanedCategoryId }),
       ...(parsedStockQuantity !== undefined && { stockQuantity: parsedStockQuantity }),
       ...(parsedMinimumStockLevel !== undefined && { minimumStockLevel: parsedMinimumStockLevel }),
       ...(parsedMaximumStockLevel !== undefined && { maximumStockLevel: parsedMaximumStockLevel }),
       ...(parsedIsAvailable !== undefined && { isAvailable: parsedIsAvailable }),
       ...(parsedProductType && { productType: parsedProductType }),
-     ...(sizes !== undefined && { sizes: parseArray(sizes) }),
-     ...(colors !== undefined && { colors: parseArray(colors) }),
-      ...(cleanOptionalString(imageUrl) && { imageUrl: cleanOptionalString(imageUrl) }),
+      ...(parsedSizes !== undefined && { sizes: parsedSizes }),
+      ...(parsedColors !== undefined && { colors: parsedColors }),
+      ...(cleanedImageUrl && { imageUrl: cleanedImageUrl }),
     };
     updateProductSchema.parse(dto);
     return this.productService.updateProduct(id, image, dto);

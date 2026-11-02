@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
+import { Prisma } from '@prisma/client';
 import { 
   CreateCategoryRequest, 
   UpdateCategoryRequest, 
@@ -6,8 +7,6 @@ import {
   CategoryListResponse 
 } from '../interfaces/category.interface.js';
 import { AppError } from '../utils/appError.js';
-
-const prisma = new PrismaClient();
 
 export class CategoryService {
   // Generate URL-friendly slug

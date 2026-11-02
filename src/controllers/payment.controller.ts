@@ -1,4 +1,4 @@
-﻿import {
+import {
   Body,
   Controller,
   Get,
@@ -19,6 +19,7 @@ import express from 'express';
 import { PaymentService } from '../services/payment.service.js';
 import {
   initiateGuestPaymentSchema,
+  initiateCustomQuotePaymentSchema,
   initiatePaymentSchema,
   updatePaymentStatusSchema,
 } from '../validators/payment.validator.js';
@@ -27,6 +28,9 @@ import {
   InitiatePaymentDTO,
   UpdatePaymentStatusDTO,
   PaymentResponse,
+  InitiateCustomQuotePaymentDTO,
+  CustomQuotePaymentResponse,
+  CustomQuotePaymentStatusResponse,
 } from '../interfaces/payment.interface.js';
 import { getUser } from '../utils/getUser.js';
 import { AppError } from '../utils/appError.js';
@@ -64,6 +68,30 @@ export class PaymentController extends Controller {
     return this.paymentService.initiateGuestPayment(validatedData);
   }
 
+  @Post('/custom-quote/{token}/initiate')
+  @SuccessResponse('200', 'Payment initiated')
+  @Response(400, 'Invalid payment details')
+  @Response(404, 'Quote link not found or expired')
+  @Response(409, 'Quote not accepted or payment already pending')
+  public async initiateCustomQuotePayment(
+    @Path() token: string,
+    @Body() body: InitiateCustomQuotePaymentDTO
+  ): Promise<CustomQuotePaymentResponse> {
+    const validatedData = initiateCustomQuotePaymentSchema.parse(body);
+
+    return this.paymentService.initiateCustomQuotePayment(
+      token,
+      validatedData
+    );
+  }
+
+  @Get('/custom-quote/{token}')
+  @Response(404, 'Quote link not found or expired')
+  public async getCustomQuotePaymentStatus(
+    @Path() token: string
+  ): Promise<CustomQuotePaymentStatusResponse> {
+    return this.paymentService.getCustomQuotePaymentStatus(token);
+  }
   @Post('/webhook/kpay')
   public async handleKpayWebhook(
     @Request() request: express.Request
@@ -92,6 +120,23 @@ export class PaymentController extends Controller {
     await this.paymentService.handleKpayWebhook({ refid, statusid });
 
     return { refid, reply: 'OK' };
+  }
+  @Post('/webhook/paypack')
+  public async handlePaypackWebhook(
+    @Request() request: express.Request
+  ): Promise<{ reply: string }> {
+    const rawBody =
+      (request as express.Request & { rawBody?: Buffer }).rawBody ??
+      Buffer.alloc(0);
+
+    await this.paymentService.handlePaypackWebhook(
+      request.body,
+      rawBody,
+      request.header('x-paypack-signature'),
+      request.header('x-webhook-mode')
+    );
+
+    return { reply: 'OK' };
   }
   @Get('/order/{orderId}')
   @Security('jwt', ['CUSTOMER'])

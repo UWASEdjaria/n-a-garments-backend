@@ -1,4 +1,5 @@
-import { PrismaClient, User } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
+import { User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { generateToken } from '../config/jwt.js';
@@ -7,7 +8,6 @@ import { AppError } from '../utils/appError.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/email.js';
 import { NotificationService } from './notification.service.js';
 
-const prisma = new PrismaClient();
 const notificationService = new NotificationService();
 
 export class AuthService {

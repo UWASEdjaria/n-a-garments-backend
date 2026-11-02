@@ -1,11 +1,10 @@
-﻿import { Prisma, PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
+import { Prisma } from '@prisma/client';
 import type {
   AdminUser,
   AdminUserListResponse,
   AdminUserSummary,
 } from '../interfaces/admin-user.interface.js';
-
-const prisma = new PrismaClient();
 
 export class AdminUserService {
   async getUsers(

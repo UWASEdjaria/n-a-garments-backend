@@ -1,4 +1,4 @@
-﻿import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { createHash, randomBytes } from 'node:crypto';
 import {
   CreateCustomOrderRequest,
@@ -11,7 +11,6 @@ import { sendCustomOrderEmail } from '../utils/email.js';
 import { NotificationService } from './notification.service.js';
 
 
-const prisma = new PrismaClient();
 const notificationService = new NotificationService();
 
 export class CustomOrderService {
@@ -267,7 +266,7 @@ export class CustomOrderService {
       where: {
         quoteAccessTokenHash: tokenHash,
         quoteAccessTokenExpiresAt: { gt: new Date() },
-        quoteStatus: 'PROPOSED',
+        quoteStatus: { in: ['PROPOSED', 'ACCEPTED'] },
       },
     });
 
@@ -315,8 +314,10 @@ export class CustomOrderService {
         quoteStatus: accepted ? 'ACCEPTED' : 'DECLINED',
         acceptedAt: accepted ? now : null,
         declinedAt: accepted ? null : now,
-        quoteAccessTokenHash: null,
-        quoteAccessTokenExpiresAt: null,
+        ...(!accepted && {
+          quoteAccessTokenHash: null,
+          quoteAccessTokenExpiresAt: null,
+        }),
       },
     });
 

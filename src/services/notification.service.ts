@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import { AppError } from '../utils/appError.js';
 import {
   AdminNotificationCountResponse,
@@ -6,8 +6,6 @@ import {
   AdminNotificationSingleResponse,
   AdminNotificationType,
 } from '../interfaces/notification.interface.js';
-
-const prisma = new PrismaClient();
 
 export interface CreateAdminNotificationInput {
   type: AdminNotificationType;

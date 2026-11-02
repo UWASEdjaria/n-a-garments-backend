@@ -1,4 +1,4 @@
-﻿import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -41,6 +41,10 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 app.head('/payments/webhook/kpay', (_req, res) => {
+  res.sendStatus(200);
+});
+
+app.head('/payments/webhook/paypack', (_req, res) => {
   res.sendStatus(200);
 });
 

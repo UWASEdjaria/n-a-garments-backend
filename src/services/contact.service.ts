@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
 import {
   ContactMessageDeleteResponse,
   ContactMessageListResponse,
@@ -9,7 +9,6 @@ import {
 import { AppError } from '../utils/appError.js';
 import { NotificationService } from './notification.service.js';
 
-const prisma = new PrismaClient();
 const notificationService = new NotificationService();
 
 export class ContactService {

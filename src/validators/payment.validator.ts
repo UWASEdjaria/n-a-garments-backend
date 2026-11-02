@@ -36,3 +36,22 @@ export const initiateGuestPaymentSchema = z
 export const updatePaymentStatusSchema = z.object({
   status: z.enum(['PENDING', 'PAID', 'SUCCESSFUL', 'FAILED', 'CANCELLED']),
 });
+
+
+export const initiateCustomQuotePaymentSchema = z
+  .object({
+    phoneNumber: z
+      .string()
+      .trim()
+      .min(1, 'Mobile Money phone number is required')
+      .max(30, 'Phone number is too long')
+      .refine((phone) => {
+        const digits = phone.replace(/\D/g, '');
+        return (
+          /^07\d{8}$/.test(digits) ||
+          /^7\d{8}$/.test(digits) ||
+          /^2507\d{8}$/.test(digits)
+        );
+      }, 'A valid Rwanda Mobile Money phone number is required'),
+  })
+  .strict();

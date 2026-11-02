@@ -21,8 +21,8 @@ export const ALLOWED_COLORS = [
 ] as const;
 export const ALLOWED_PRODUCT_TYPES = ['READY_TO_WEAR', 'MADE_TO_ORDER'] as const;
 
-const sizeEnum = z.string().trim().min(1, 'Size cannot be empty');
-const colorEnum = z.string().trim().min(1, 'Color cannot be empty');
+const sizeEnum = z.enum(ALLOWED_SIZES);
+const colorEnum = z.enum(ALLOWED_COLORS);
 const productTypeEnum = z.enum(ALLOWED_PRODUCT_TYPES, { error: `Product type must be READY_TO_WEAR or MADE_TO_ORDER` });
 
 const productFields = {
