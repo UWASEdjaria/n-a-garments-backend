@@ -3,7 +3,7 @@ import { User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { generateToken } from '../config/jwt.js';
-import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, JwtPayload, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface.js';
+import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, JwtPayload, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse, ResendVerificationRequest } from '../interfaces/auth.interface.js';
 import { AppError } from '../utils/appError.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/email.js';
 import { NotificationService } from './notification.service.js';
@@ -60,7 +60,7 @@ export class AuthService {
 
   const passwordHash = await bcrypt.hash(password, 10);
   const verificationToken = crypto.randomBytes(32).toString('hex');
-  const verificationExpiry = new Date(Date.now() + 30 * 60 * 1000);
+  const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
   const user = await prisma.user.create({
     data: {
@@ -194,6 +194,41 @@ return this.buildAuthResponse(user, 'Login successful');
     });
 
     return { success: true, message: 'Password reset successfully. You can now log in.' };
+  }
+
+  async resendVerificationEmail(body: ResendVerificationRequest): Promise<MessageResponse> {
+    const normalizedEmail = body.email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    // Always return success to prevent email enumeration
+    if (!user || user.isEmailVerified) {
+      return { success: true, message: 'If this email exists and is unverified, a new verification link has been sent.' };
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationToken: verificationToken,
+        emailVerificationTokenExpiry: verificationExpiry,
+      },
+    });
+
+    const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify-email?token=${verificationToken}`;
+
+    try {
+      await sendVerificationEmail(user.email, user.name, verificationUrl);
+    } catch {
+      throw new AppError('Unable to send verification email. Please try again.', 500);
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEV] Resent verification email for ${user.email}. Token: ${verificationToken}`);
+    }
+
+    return { success: true, message: 'If this email exists and is unverified, a new verification link has been sent.' };
   }
 
   async verifyEmail(token: string): Promise<MessageResponse> {

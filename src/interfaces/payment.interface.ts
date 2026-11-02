@@ -1,7 +1,7 @@
 
 export type PaymentStatusType = 'PENDING' | 'PAID' | 'SUCCESSFUL' | 'FAILED' | 'CANCELLED';
 export type PaymentMethodType = 'MOMO' | 'CARD' | 'CASH_ON_DELIVERY';
-export type PaymentProviderType = 'PAYPACK' | 'KPAY';
+export type PaymentProviderType = 'PAYPACK' | 'PAYPAL';
 
 
 export interface InitiatePaymentDTO {

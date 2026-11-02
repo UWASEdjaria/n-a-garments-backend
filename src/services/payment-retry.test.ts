@@ -22,15 +22,15 @@ test('SUCCESSFUL payment cannot be retried', () => {
   assert.equal(isRetryEligible({ status: 'SUCCESSFUL' }), false);
 });
 
-import { KPayRequestError } from './kpay.service.js';
+import { PayPalRequestError } from './paypal.service.js';
 
-test('confirmed K-Pay rejection returns HTTP 400', () => {
-  const error = new KPayRequestError('Payment rejected', true);
+test('confirmed PayPal rejection returns HTTP 400', () => {
+  const error = new PayPalRequestError('Payment rejected', true);
   assert.equal(error.statusCode, 400);
 });
 
-test('uncertain K-Pay outcome returns HTTP 503', () => {
-  const error = new KPayRequestError('Payment outcome uncertain', false);
+test('uncertain PayPal outcome returns HTTP 503', () => {
+  const error = new PayPalRequestError('Payment outcome uncertain', false);
   assert.equal(error.statusCode, 503);
 });
 

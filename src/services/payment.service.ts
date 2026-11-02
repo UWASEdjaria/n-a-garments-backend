@@ -12,7 +12,7 @@ import {
   CustomQuotePaymentStatusResponse,
 } from '../interfaces/payment.interface.js';
 import { AppError } from '../utils/appError.js';
-import { KPayRequestError, KPayService } from './kpay.service.js';
+import { PayPalRequestError, PayPalService } from './paypal.service.js';
 import { PaypackRequestError, PaypackService, type PaypackWebhookPayload } from './paypack.service.js';
 import { isRetryEligible } from './payment-retry.js';
 
@@ -33,16 +33,16 @@ const formatRwandaPhone = (phone: string): string => {
 
 export class PaymentService {
   private readonly prisma: PrismaClient;
-  private readonly kpayService: KPayService;
+  private readonly paypalService: PayPalService;
   private readonly paypackService: PaypackService;
 
   constructor(
     prismaClient: PrismaClient = prisma,
-    kpayService: KPayService = new KPayService(),
+    paypalService: PayPalService = new PayPalService(),
     paypackService: PaypackService = new PaypackService()
   ) {
     this.prisma = prismaClient;
-    this.kpayService = kpayService;
+    this.paypalService = paypalService;
     this.paypackService = paypackService;
   }
 
@@ -370,7 +370,7 @@ export class PaymentService {
                 data.paymentMethod === 'MOMO'
                   ? 'PAYPACK'
                   : data.paymentMethod === 'CARD'
-                    ? 'KPAY'
+                    ? 'PAYPAL'
                     : null,
               status: 'PENDING',
               ref: `ATTEMPT-${randomUUID()}`,
@@ -487,63 +487,21 @@ export class PaymentService {
       }
     } else if (data.paymentMethod === 'CARD') {
       try {
-        if (!Number.isSafeInteger(payment.amount.toNumber())) {
-          throw new AppError(
-            'K-Pay requires an integer RWF amount. Please contact support.',
-            400
-          );
-        }
-
-        const orderDetails = await this.prisma.order.findUnique({
-          where: { id: data.orderId },
-          select: {
-            id: true,
-            guestEmail: true,
-            guestName: true,
-            user: {
-              select: {
-                email: true,
-                name: true,
-              },
-            },
-          },
-        });
-
-        if (!orderDetails) {
-          throw new AppError('Order not found.', 404);
-        }
-
-        const customerEmail =
-          orderDetails.guestEmail?.trim() ||
-          orderDetails.user?.email?.trim();
-
-        if (!customerEmail) {
-          throw new AppError(
-            'A customer email is required for K-Pay checkout.',
-            400
-          );
-        }
-
-        const result = await this.kpayService.initiatePayment({
+        const result = await this.paypalService.createOrder({
           refid: payment.ref,
-          phoneNumber: payment.phoneNumber || '',
-          email: customerEmail,
-          details: `Nagarments order ${orderDetails.id}`,
           amount: payment.amount.toNumber(),
-          customerName:
-            orderDetails.guestName?.trim() ||
-            orderDetails.user?.name?.trim() ||
-            'Nagarments Customer',
-          customerNumber: orderDetails.id,
-          paymentMethod: 'cc',
+          currency: 'USD',
+          description: `NA Garments order ${data.orderId}`,
         });
 
-        checkoutUrl = result.url;
+        await this.prisma.payment.update({
+          where: { id: payment.id },
+          data: { providerTransactionRef: result.orderId },
+        });
+
+        checkoutUrl = result.checkoutUrl;
       } catch (error) {
-        if (
-          error instanceof KPayRequestError &&
-          error.definitivelyRejected
-        ) {
+        if (error instanceof PayPalRequestError && error.definitivelyRejected) {
           await this.prisma.$transaction(
             async (transaction: Prisma.TransactionClient) => {
               await transaction.payment.update({
@@ -579,17 +537,40 @@ export class PaymentService {
         ? 'Cash on Delivery selected. Payment will be collected upon delivery.'
         : data.paymentMethod === 'MOMO'
           ? 'Paypack Mobile Money payment initialized.'
-          : 'K-Pay card checkout initialized.';
+          : 'PayPal checkout initialized.';
 
     return this.toResponse(payment, message, false, checkoutUrl);
   }
 
-  public async handleKpayWebhook(payload: {
-    refid: string;
-    statusid: string;
-  }): Promise<void> {
+  public async handlePaypalWebhook(
+    payload: unknown,
+    rawBody: Buffer,
+    headers: {
+      transmissionId?: string;
+      transmissionTime?: string;
+      certUrl?: string;
+      authAlgo?: string;
+      transmissionSig?: string;
+    }
+  ): Promise<void> {
+    if (!this.paypalService.verifyWebhookSignature(rawBody, headers)) {
+      throw new AppError('Invalid PayPal webhook signature.', 401);
+    }
+
+    const event = this.paypalService.parseWebhookPayload(payload);
+
+    // Only handle PAYMENT.CAPTURE.COMPLETED and PAYMENT.CAPTURE.DENIED
+    if (
+      event.event_type !== 'PAYMENT.CAPTURE.COMPLETED' &&
+      event.event_type !== 'PAYMENT.CAPTURE.DENIED'
+    ) {
+      return;
+    }
+
+    const paypalOrderId = event.resource.id;
+
     const paymentRecord = await this.prisma.payment.findUnique({
-      where: { ref: payload.refid },
+      where: { providerTransactionRef: paypalOrderId },
     });
 
     if (!paymentRecord) {
@@ -599,57 +580,25 @@ export class PaymentService {
       );
     }
 
-    const verified = await this.kpayService.checkStatus(payload.refid);
-
-    if (
-      verified.refid !== paymentRecord.ref ||
-      verified.statusid !== payload.statusid
-    ) {
-      throw new AppError(
-        'K-Pay callback did not match the independently verified payment status.',
-        503
-      );
-    }
-
-    if (
-      verified.amount !== undefined &&
-      Number(verified.amount) !== Number(paymentRecord.amount)
-    ) {
-      throw new AppError(
-        'K-Pay transaction amount does not match the recorded payment.',
-        503
-      );
-    }
-
-    if (verified.statusid === '03') {
+    if (paymentRecord.status === 'PAID' || paymentRecord.status === 'SUCCESSFUL') {
       return;
     }
 
-    const isSuccess = verified.statusid === '01';
+    const isSuccess = event.event_type === 'PAYMENT.CAPTURE.COMPLETED';
     const finalStatus = isSuccess ? 'PAID' : 'FAILED';
 
     await this.prisma.$transaction(
       async (transaction: Prisma.TransactionClient) => {
         const payment = await transaction.payment.findUnique({
-          where: { ref: payload.refid },
+          where: { id: paymentRecord.id },
         });
 
-        if (!payment) {
-          throw new AppError('Payment record not found.', 503);
-        }
-
-        if (
-          payment.status === 'PAID' ||
-          payment.status === 'SUCCESSFUL'
-        ) {
+        if (!payment || payment.status === 'PAID' || payment.status === 'SUCCESSFUL') {
           return;
         }
 
         if (!payment.orderId) {
-          throw new AppError(
-            'Custom-order payment handling is not implemented.',
-            503
-          );
+          throw new AppError('Custom-order PayPal payment handling is not implemented.', 503);
         }
 
         if (isSuccess) {
@@ -662,27 +611,18 @@ export class PaymentService {
           });
 
           await transaction.payment.updateMany({
-            where: {
-              id: payment.id,
-              status: { notIn: ['PAID', 'SUCCESSFUL'] },
-            },
-            data: {
-              status: orderUpdate.count === 1 ? 'PAID' : 'SUCCESSFUL',
-            },
+            where: { id: payment.id, status: { notIn: ['PAID', 'SUCCESSFUL'] } },
+            data: { status: orderUpdate.count === 1 ? 'PAID' : 'SUCCESSFUL' },
           });
 
           if (orderUpdate.count === 1) {
             await transaction.payment.updateMany({
-              where: {
-                orderId: payment.orderId,
-                id: { not: payment.id },
-                status: 'PENDING',
-              },
+              where: { orderId: payment.orderId, id: { not: payment.id }, status: 'PENDING' },
               data: { status: 'CANCELLED' },
             });
           } else {
             console.error(
-              `K-Pay reported another successful attempt for already-paid order ${payment.orderId}; reference ${payload.refid} requires reconciliation.`
+              `PayPal reported another successful capture for already-paid order ${payment.orderId}; PayPal order ${paypalOrderId} requires reconciliation.`
             );
           }
 
@@ -690,10 +630,7 @@ export class PaymentService {
         }
 
         await transaction.payment.updateMany({
-          where: {
-            id: payment.id,
-            status: { notIn: ['PAID', 'SUCCESSFUL'] },
-          },
+          where: { id: payment.id, status: { notIn: ['PAID', 'SUCCESSFUL'] } },
           data: { status: finalStatus },
         });
 

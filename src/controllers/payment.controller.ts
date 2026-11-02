@@ -92,34 +92,27 @@ export class PaymentController extends Controller {
   ): Promise<CustomQuotePaymentStatusResponse> {
     return this.paymentService.getCustomQuotePaymentStatus(token);
   }
-  @Post('/webhook/kpay')
-  public async handleKpayWebhook(
+  @Post('/webhook/paypal')
+  public async handlePaypalWebhook(
     @Request() request: express.Request
-  ): Promise<{ refid: string; reply: string }> {
-    const body = request.body as {
-      tid?: unknown;
-      refid?: unknown;
-      statusid?: unknown;
-    };
+  ): Promise<{ reply: string }> {
+    const rawBody =
+      (request as express.Request & { rawBody?: Buffer }).rawBody ??
+      Buffer.alloc(0);
 
-    const refid =
-      typeof body.refid === 'string' ? body.refid.trim() : '';
+    await this.paymentService.handlePaypalWebhook(
+      request.body,
+      rawBody,
+      {
+        transmissionId: request.header('paypal-transmission-id'),
+        transmissionTime: request.header('paypal-transmission-time'),
+        certUrl: request.header('paypal-cert-url'),
+        authAlgo: request.header('paypal-auth-algo'),
+        transmissionSig: request.header('paypal-transmission-sig'),
+      }
+    );
 
-    const statusid =
-      typeof body.statusid === 'string'
-        ? body.statusid.trim()
-        : typeof body.statusid === 'number' &&
-            Number.isInteger(body.statusid)
-          ? String(body.statusid).padStart(2, '0')
-          : '';
-
-    if (!refid || !['01', '02', '03'].includes(statusid)) {
-      throw new AppError('Invalid K-Pay callback payload.', 400);
-    }
-
-    await this.paymentService.handleKpayWebhook({ refid, statusid });
-
-    return { refid, reply: 'OK' };
+    return { reply: 'OK' };
   }
   @Post('/webhook/paypack')
   public async handlePaypackWebhook(
