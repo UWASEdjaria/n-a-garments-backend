@@ -1,7 +1,7 @@
 import { Controller, Route,Query, Post, Get, Body, SuccessResponse, Response, Tags, Security, Request } from 'tsoa';
 import express from 'express';
 import { AuthService } from '../services/auth.service.js';
-import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, StandardErrorResponse, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse } from '../interfaces/auth.interface.js';
+import { RegisterRequest, LoginRequest, AuthResponse, AuthUserData, StandardErrorResponse, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse, ResendVerificationRequest } from '../interfaces/auth.interface.js';
 import { getUser } from '../utils/getUser.js';
 
 const authService = new AuthService();
@@ -55,7 +55,15 @@ export class AuthController extends Controller {
     return authService.resetPassword(requestBody);
   }
   
-    /** Verifies a customer's email address */
+    /** Resends the email verification link to an unverified account */
+  @Post('resend-verification')
+  @SuccessResponse('200', 'Success')
+  @Response<StandardErrorResponse>(500, 'Failed to send email')
+  public async resendVerification(@Body() requestBody: ResendVerificationRequest): Promise<MessageResponse> {
+    return authService.resendVerificationEmail(requestBody);
+  }
+
+  /** Verifies a customer's email address */
   @Get('verify-email')
   @SuccessResponse('200', 'Email verified successfully')
   @Response<StandardErrorResponse>(400, 'Invalid or expired verification link')

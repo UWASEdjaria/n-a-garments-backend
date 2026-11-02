@@ -262,7 +262,7 @@ enum PaymentStatus {
 
 enum PaymentProvider {
   PAYPACK
-  KPAY
+  PAYPAL
 }
 
 enum PaymentMethod {
