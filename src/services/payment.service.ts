@@ -1,6 +1,6 @@
 import { prisma } from '../utils/prisma.js';
 import { createHash, randomUUID } from 'node:crypto';
-import { PrismaClient, type Payment, type Prisma } from '@prisma/client';
+import { Prisma as PrismaRuntime, PrismaClient, type Payment, type Prisma } from '@prisma/client';
 import {
   InitiateGuestPaymentDTO,
   InitiatePaymentDTO,
@@ -12,7 +12,12 @@ import {
   CustomQuotePaymentStatusResponse,
 } from '../interfaces/payment.interface.js';
 import { AppError } from '../utils/appError.js';
-import { PayPalRequestError, PayPalService } from './paypal.service.js';
+import {
+  PayPalRequestError,
+  PayPalService,
+  type PayPalCaptureResult,
+  type PayPalWebhookHeaders,
+} from './paypal.service.js';
 import { PaypackRequestError, PaypackService, type PaypackWebhookPayload } from './paypack.service.js';
 import { isRetryEligible } from './payment-retry.js';
 
@@ -30,6 +35,14 @@ const formatRwandaPhone = (phone: string): string => {
   return cleaned;
 };
 
+const parseUsdCents = (value: string): number | null => {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(value)) return null;
+
+  const [whole, fraction = ''] = value.split('.');
+  const cents = Number(whole) * 100 + Number((fraction + '00').slice(0, 2));
+
+  return Number.isSafeInteger(cents) ? cents : null;
+};
 
 export class PaymentService {
   private readonly prisma: PrismaClient;
@@ -349,7 +362,13 @@ export class PaymentService {
                   !pendingAttempt.providerTransactionRef &&
                    pendingAttempt.phoneNumber === normalizedPhone;
 
-                  if (canRecoverPaypackAttempt) {
+                  const canRecoverPayPalAttempt =
+                    data.paymentMethod === 'CARD' &&
+                    pendingAttempt.paymentMethod === 'CARD' &&
+                    pendingAttempt.provider === 'PAYPAL' &&
+                    !pendingAttempt.providerTransactionRef;
+
+                  if (canRecoverPaypackAttempt || canRecoverPayPalAttempt) {
                     return pendingAttempt;
                   }
 
@@ -496,7 +515,10 @@ export class PaymentService {
 
         await this.prisma.payment.update({
           where: { id: payment.id },
-          data: { providerTransactionRef: result.orderId },
+          data: {
+            providerTransactionRef: result.orderId,
+            providerAmount: result.amount,
+          },
         });
 
         checkoutUrl = result.checkoutUrl;
@@ -543,22 +565,15 @@ export class PaymentService {
   }
 
   public async handlePaypalWebhook(
-    payload: unknown,
+    payload: object,
     rawBody: Buffer,
-    headers: {
-      transmissionId?: string;
-      transmissionTime?: string;
-      certUrl?: string;
-      authAlgo?: string;
-      transmissionSig?: string;
-    }
+    headers: PayPalWebhookHeaders
   ): Promise<void> {
-    if (!this.paypalService.verifyWebhookSignature(rawBody, headers)) {
-      throw new AppError('Invalid PayPal webhook signature.', 401);
-    }
-
     const event = this.paypalService.parseWebhookPayload(payload);
 
+    if (!(await this.paypalService.verifyWebhookSignature(rawBody, event, headers))) {
+      throw new AppError('Invalid PayPal webhook signature.', 401);
+    }
     // Only handle PAYMENT.CAPTURE.COMPLETED and PAYMENT.CAPTURE.DENIED
     if (
       event.event_type !== 'PAYMENT.CAPTURE.COMPLETED' &&
@@ -567,7 +582,34 @@ export class PaymentService {
       return;
     }
 
-    const paypalOrderId = event.resource.id;
+    const paypalOrderId = event.resource.supplementary_data?.related_ids?.order_id;
+
+    if (!paypalOrderId?.trim() || paypalOrderId !== paypalOrderId.trim()) {
+      throw new AppError('PayPal capture event is missing its related order ID.', 400);
+    }
+
+    const isSuccess = event.event_type === 'PAYMENT.CAPTURE.COMPLETED';
+
+    if (
+      (isSuccess && event.resource.status !== 'COMPLETED') ||
+      (!isSuccess && event.resource.status !== 'DECLINED' && event.resource.status !== 'DENIED')
+    ) {
+      throw new AppError('PayPal capture event type and capture status do not match.', 400);
+    }
+
+    const capturedAmount = event.resource.amount?.value;
+
+    if (
+      event.resource.amount?.currency_code !== 'USD' ||
+      typeof capturedAmount !== 'string' ||
+      !/^\d+(?:\.\d{1,2})?$/.test(capturedAmount) ||
+      !Number.isFinite(Number(capturedAmount)) ||
+      Number(capturedAmount) <= 0
+    ) {
+      throw new AppError('PayPal capture event has an invalid amount or currency.', 400);
+    }
+
+    const finalStatus = isSuccess ? 'PAID' : 'FAILED';
 
     const paymentRecord = await this.prisma.payment.findUnique({
       where: { providerTransactionRef: paypalOrderId },
@@ -580,71 +622,234 @@ export class PaymentService {
       );
     }
 
+    if (
+      paymentRecord.provider !== 'PAYPAL' ||
+      paymentRecord.paymentMethod !== 'CARD' ||
+      !paymentRecord.orderId
+    ) {
+      throw new AppError('PayPal order reference does not match a card payment.', 409);
+    }
+
+    const expectedUsd = paymentRecord.providerAmount?.toFixed(2);
+    const expectedCents = expectedUsd ? parseUsdCents(expectedUsd) : null;
+    const webhookCents = parseUsdCents(capturedAmount);
+
+    if (
+      expectedCents === null ||
+      expectedCents <= 0 ||
+      webhookCents === null ||
+      webhookCents <= 0 ||
+      expectedCents !== webhookCents
+    ) {
+      throw new AppError(
+        'PayPal webhook amount does not match the expected payment amount.',
+        409
+      );
+    }
+
+    const existingEventPayment = await this.prisma.payment.findUnique({
+      where: { providerEventId: event.id },
+      select: { id: true },
+    });
+
+    if (existingEventPayment) {
+      if (existingEventPayment.id !== paymentRecord.id) {
+        throw new AppError('PayPal webhook event ID is associated with another payment.', 409);
+      }
+
+      return;
+    }
+
     if (paymentRecord.status === 'PAID' || paymentRecord.status === 'SUCCESSFUL') {
       return;
     }
 
-    const isSuccess = event.event_type === 'PAYMENT.CAPTURE.COMPLETED';
-    const finalStatus = isSuccess ? 'PAID' : 'FAILED';
+    try {
+      await this.prisma.$transaction(
+        async (transaction: Prisma.TransactionClient) => {
+          const payment = await transaction.payment.findUnique({
+            where: { id: paymentRecord.id },
+          });
 
-    await this.prisma.$transaction(
-      async (transaction: Prisma.TransactionClient) => {
-        const payment = await transaction.payment.findUnique({
-          where: { id: paymentRecord.id },
-        });
+          if (!payment) {
+            return;
+          }
 
-        if (!payment || payment.status === 'PAID' || payment.status === 'SUCCESSFUL') {
-          return;
-        }
+          const duplicateEventPayment = await transaction.payment.findUnique({
+            where: { providerEventId: event.id },
+            select: { id: true },
+          });
 
-        if (!payment.orderId) {
-          throw new AppError('Custom-order PayPal payment handling is not implemented.', 503);
-        }
+          if (duplicateEventPayment) {
+            if (duplicateEventPayment.id !== payment.id) {
+              throw new AppError(
+                'PayPal webhook event ID is associated with another payment.',
+                409
+              );
+            }
 
-        if (isSuccess) {
-          const orderUpdate = await transaction.order.updateMany({
+            return;
+          }
+
+          if (payment.status === 'PAID' || payment.status === 'SUCCESSFUL') {
+            return;
+          }
+
+          if (!payment.orderId) {
+            throw new AppError('Custom-order PayPal payment handling is not implemented.', 503);
+          }
+
+          if (isSuccess) {
+            const orderUpdate = await transaction.order.updateMany({
+              where: {
+                id: payment.orderId,
+                paymentStatus: { notIn: ['PAID', 'CANCELLED'] },
+              },
+              data: { paymentStatus: 'PAID' },
+            });
+
+            const paymentUpdate = await transaction.payment.updateMany({
+              where: { id: payment.id, status: { notIn: ['PAID', 'SUCCESSFUL'] } },
+              data: {
+                status: orderUpdate.count === 1 ? 'PAID' : 'SUCCESSFUL',
+                providerEventId: event.id,
+              },
+            });
+
+            if (paymentUpdate.count === 0) {
+              if (orderUpdate.count === 0) {
+                const currentPayment = await transaction.payment.findUnique({
+                  where: { id: payment.id },
+                });
+
+                if (
+                  currentPayment?.status === 'PAID' ||
+                  currentPayment?.status === 'SUCCESSFUL'
+                ) {
+                  return;
+                }
+              }
+
+              throw new AppError(
+                'Payment state changed during PayPal capture processing. Retry the webhook.',
+                503
+              );
+            }
+
+            if (orderUpdate.count === 1) {
+              await transaction.payment.updateMany({
+                where: { orderId: payment.orderId, id: { not: payment.id }, status: 'PENDING' },
+                data: { status: 'CANCELLED' },
+              });
+            } else {
+              console.error(
+                `PayPal reported another successful capture for already-paid order ${payment.orderId}; PayPal order ${paypalOrderId} requires reconciliation.`
+              );
+            }
+
+            return;
+          }
+
+          const paymentUpdate = await transaction.payment.updateMany({
+            where: { id: payment.id, status: { notIn: ['PAID', 'SUCCESSFUL'] } },
+            data: { status: finalStatus, providerEventId: event.id },
+          });
+
+          if (paymentUpdate.count === 0) {
+            return;
+          }
+
+          await transaction.order.updateMany({
             where: {
               id: payment.orderId,
               paymentStatus: { notIn: ['PAID', 'CANCELLED'] },
+              payments: { none: { status: 'PENDING' } },
             },
-            data: { paymentStatus: 'PAID' },
+            data: { paymentStatus: finalStatus },
           });
+        }
+      );
+    } catch (error) {
+      if (
+        error instanceof PrismaRuntime.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const conflictingEvent = await this.prisma.payment.findUnique({
+          where: { providerEventId: event.id },
+          select: { id: true },
+        });
 
-          await transaction.payment.updateMany({
-            where: { id: payment.id, status: { notIn: ['PAID', 'SUCCESSFUL'] } },
-            data: { status: orderUpdate.count === 1 ? 'PAID' : 'SUCCESSFUL' },
-          });
-
-          if (orderUpdate.count === 1) {
-            await transaction.payment.updateMany({
-              where: { orderId: payment.orderId, id: { not: payment.id }, status: 'PENDING' },
-              data: { status: 'CANCELLED' },
-            });
-          } else {
-            console.error(
-              `PayPal reported another successful capture for already-paid order ${payment.orderId}; PayPal order ${paypalOrderId} requires reconciliation.`
-            );
-          }
-
+        if (conflictingEvent?.id === paymentRecord.id) {
           return;
         }
 
-        await transaction.payment.updateMany({
-          where: { id: payment.id, status: { notIn: ['PAID', 'SUCCESSFUL'] } },
-          data: { status: finalStatus },
-        });
-
-        await transaction.order.updateMany({
-          where: {
-            id: payment.orderId,
-            paymentStatus: { notIn: ['PAID', 'CANCELLED'] },
-            payments: { none: { status: 'PENDING' } },
-          },
-          data: { paymentStatus: finalStatus },
-        });
+        if (conflictingEvent) {
+          throw new AppError('PayPal webhook event ID is associated with another payment.', 409);
+        }
       }
-    );
+
+      throw error;
+    }
   }
+  public async capturePaypalPayment(
+    orderId: string,
+    userId: string | undefined,
+    guestEmail?: string
+  ): Promise<PayPalCaptureResult> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, userId: true, guestEmail: true, status: true, paymentStatus: true },
+    });
+
+    const ownsOrder = guestEmail !== undefined
+      ? order?.userId === null &&
+        order.guestEmail?.trim().toLowerCase() === guestEmail.trim().toLowerCase()
+      : userId !== undefined && order?.userId === userId;
+
+    if (!order || !ownsOrder) {
+      throw new AppError('Order not found.', 404);
+    }
+
+    if (order.status === 'CANCELLED' || order.paymentStatus === 'CANCELLED') {
+      throw new AppError('Payment cannot be captured for a cancelled order.', 409);
+    }
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        orderId: order.id,
+        provider: 'PAYPAL',
+        paymentMethod: 'CARD',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!payment || !payment.providerTransactionRef) {
+      throw new AppError('A PayPal order is not available for capture.', 404);
+    }
+
+    if (payment.status !== 'PENDING') {
+      throw new AppError('Only a pending PayPal payment can be captured.', 409);
+    }
+
+    const expectedUsd = payment.providerAmount?.toFixed(2);
+    const expectedCents = expectedUsd ? parseUsdCents(expectedUsd) : null;
+
+    if (expectedCents === null || expectedCents <= 0) {
+      throw new AppError('The expected PayPal payment amount is missing or invalid.', 409);
+    }
+
+    const capture = await this.paypalService.captureOrder(payment.providerTransactionRef);
+
+    if (
+      !Number.isSafeInteger(capture.amount) ||
+      capture.amount !== expectedCents
+    ) {
+      throw new AppError('PayPal capture amount does not match the expected payment amount.', 409);
+    }
+
+    return capture;
+  }
+
   public async updatePaymentStatus(
     paymentId: string,
     dto: UpdatePaymentStatusDTO
@@ -1178,7 +1383,3 @@ export class PaymentService {
   }
 
 }
-
-
-
-

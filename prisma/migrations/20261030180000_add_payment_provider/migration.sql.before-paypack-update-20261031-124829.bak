@@ -1,4 +1,0 @@
-CREATE TYPE "PaymentProvider" AS ENUM ('PAYPACK', 'KPAY');
-
-ALTER TABLE "Payment"
-ADD COLUMN "provider" "PaymentProvider";
