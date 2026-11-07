@@ -3689,36 +3689,6 @@
 				"parameters": []
 			}
 		},
-		"/payments/webhook/paypack": {
-			"post": {
-				"operationId": "HandlePaypackWebhook",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"properties": {
-										"reply": {
-											"type": "string"
-										}
-									},
-									"required": [
-										"reply"
-									],
-									"type": "object"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Payments"
-				],
-				"security": [],
-				"parameters": []
-			}
-		},
 		"/payments/order/{orderId}": {
 			"get": {
 				"operationId": "GetPaymentByOrderId",
