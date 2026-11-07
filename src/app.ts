@@ -48,6 +48,10 @@ app.head('/payments/webhook/paypack', (_req, res) => {
   res.sendStatus(200);
 });
 
+app.head('/payments/webhook/paypack', (_req, res) => {
+  res.sendStatus(200);
+});
+
 RegisterRoutes(app);
 
 app.use(errorHandler);
