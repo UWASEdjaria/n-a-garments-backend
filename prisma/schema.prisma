@@ -221,6 +221,7 @@ model Payment {
   provider      PaymentProvider?
 
   providerTransactionRef String? @unique
+  providerAmount         Decimal? @db.Decimal(10, 2)
   status        PaymentRecordStatus @default(PENDING)
   ref           String              @unique
   phoneNumber   String?
@@ -262,7 +263,7 @@ enum PaymentStatus {
 
 enum PaymentProvider {
   PAYPACK
-  KPAY
+  PAYPAL
 }
 
 enum PaymentMethod {

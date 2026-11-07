@@ -12,3 +12,6 @@ JWT_EXPIRES_IN="7d"
 FRONTEND_URL="https://na-garments-frontend.vercel.app"
 PORT=5000
 src/generated/
+
+*.bak
+*.backup

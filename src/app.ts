@@ -40,7 +40,11 @@ app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ success: true, message: 'nagarments API is running' });
 });
 
-app.head('/payments/webhook/kpay', (_req, res) => {
+app.head('/payments/webhook/paypal', (_req, res) => {
+  res.sendStatus(200);
+});
+
+app.head('/payments/webhook/paypack', (_req, res) => {
   res.sendStatus(200);
 });
 

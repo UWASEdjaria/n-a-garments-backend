@@ -1,4 +1,5 @@
-import { prisma } from '../utils/prisma.js';
+﻿import { prisma } from '../utils/prisma.js';
+import { AppError } from '../utils/appError.js';
 import type {
   AdminCart,
   AdminCartItem,
@@ -98,6 +99,90 @@ export class AdminCartService {
       message: 'Customer carts retrieved successfully',
       data,
       total: data.length,
+    };
+  }
+
+  async removeCustomerCartItem(
+    userId: string,
+    itemId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const customer = await prisma.user.findFirst({
+      where: { id: userId, role: 'CUSTOMER' },
+      select: { id: true },
+    });
+
+    if (!customer) {
+      throw new AppError('Customer not found', 404);
+    }
+
+    const item = await prisma.cartItem.findFirst({
+      where: {
+        id: itemId,
+        cart: { userId },
+      },
+      select: {
+        id: true,
+        cartId: true,
+      },
+    });
+
+    if (!item) {
+      throw new AppError('Cart item not found for this customer', 404);
+    }
+
+    await prisma.$transaction([
+      prisma.cartItem.delete({
+        where: { id: item.id },
+      }),
+      prisma.cart.update({
+        where: { id: item.cartId },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message: 'Item removed from customer cart',
+    };
+  }
+
+  async clearCustomerCart(
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const customer = await prisma.user.findFirst({
+      where: { id: userId, role: 'CUSTOMER' },
+      select: { id: true },
+    });
+
+    if (!customer) {
+      throw new AppError('Customer not found', 404);
+    }
+
+    const cart = await prisma.cart.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!cart) {
+      return {
+        success: true,
+        message: 'Customer cart is already empty',
+      };
+    }
+
+    await prisma.$transaction([
+      prisma.cartItem.deleteMany({
+        where: { cartId: cart.id },
+      }),
+      prisma.cart.update({
+        where: { id: cart.id },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message: 'Customer cart cleared',
     };
   }
 }

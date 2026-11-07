@@ -432,7 +432,7 @@
 				"type": "string",
 				"enum": [
 					"PAYPACK",
-					"KPAY"
+					"PAYPAL"
 				]
 			},
 			"PaymentStatusType": {
@@ -2232,6 +2232,18 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"ResendVerificationRequest": {
+				"properties": {
+					"email": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"email"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"AdminUser": {
 				"properties": {
 					"id": {
@@ -3617,9 +3629,9 @@
 				]
 			}
 		},
-		"/payments/webhook/kpay": {
+		"/payments/webhook/paypal": {
 			"post": {
-				"operationId": "HandleKpayWebhook",
+				"operationId": "HandlePaypalWebhook",
 				"responses": {
 					"200": {
 						"description": "Ok",
@@ -3629,14 +3641,40 @@
 									"properties": {
 										"reply": {
 											"type": "string"
-										},
-										"refid": {
+										}
+									},
+									"required": [
+										"reply"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Payments"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
+		"/payments/webhook/paypack": {
+			"post": {
+				"operationId": "HandlePaypackWebhook",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"reply": {
 											"type": "string"
 										}
 									},
 									"required": [
-										"reply",
-										"refid"
+										"reply"
 									],
 									"type": "object"
 								}
@@ -5683,6 +5721,49 @@
 				}
 			}
 		},
+		"/auth/resend-verification": {
+			"post": {
+				"operationId": "ResendVerification",
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/MessageResponse"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Failed to send email",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/StandardErrorResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Resends the email verification link to an unverified account",
+				"tags": [
+					"Authentication"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ResendVerificationRequest"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/auth/verify-email": {
 			"get": {
 				"operationId": "VerifyEmail",
@@ -5822,6 +5903,118 @@
 					}
 				],
 				"parameters": []
+			}
+		},
+		"/admin/carts/{userId}/items/{itemId}": {
+			"delete": {
+				"operationId": "RemoveCustomerCartItem",
+				"responses": {
+					"200": {
+						"description": "Item removed from customer cart",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"message",
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Customer or cart item not found"
+					}
+				},
+				"tags": [
+					"Admin Carts"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "userId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "itemId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/admin/carts/{userId}/items": {
+			"delete": {
+				"operationId": "ClearCustomerCart",
+				"responses": {
+					"200": {
+						"description": "Customer cart cleared",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"message",
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Customer not found"
+					}
+				},
+				"tags": [
+					"Admin Carts"
+				],
+				"security": [
+					{
+						"jwt": [
+							"ADMIN"
+						]
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "userId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		}
 	},
