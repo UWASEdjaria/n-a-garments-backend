@@ -131,23 +131,7 @@ export class PaymentController extends Controller {
 
     return { reply: 'OK' };
   }
-  @Post('/webhook/paypack')
-  public async handlePaypackWebhook(
-    @Request() request: express.Request
-  ): Promise<{ reply: string }> {
-    const rawBody =
-      (request as express.Request & { rawBody?: Buffer }).rawBody ??
-      Buffer.alloc(0);
 
-    await this.paymentService.handlePaypackWebhook(
-      request.body,
-      rawBody,
-      request.header('x-paypack-signature'),
-      request.header('x-webhook-mode')
-    );
-
-    return { reply: 'OK' };
-  }
   @Get('/order/{orderId}')
   @Security('jwt', ['CUSTOMER'])
   public async getPaymentByOrderId(
